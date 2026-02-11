@@ -26,6 +26,7 @@ export function initPopupMenu(containerDiv) {
         event.stopPropagation();
         event.preventDefault();
 
+        // The actions are to be replaced by state transformations on the graph. 
         const menuDef = [
             {
                 text: "Alert action !",

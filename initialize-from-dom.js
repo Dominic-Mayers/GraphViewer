@@ -1,4 +1,4 @@
-// initial-state.js
+// initialize-from-dom.js
 // Reads initial "state" from the DOM (currently JSON-encoded SVG string)
 
 const jsonElement = document.getElementById("graph-data");
@@ -7,5 +7,4 @@ if (!jsonElement) {
 }
 
 // Parse JSON string
-export const initialState = JSON.parse(jsonElement.textContent);
-
+export const initialFromDOM = JSON.parse(jsonElement.textContent);
