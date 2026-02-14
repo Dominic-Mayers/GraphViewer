@@ -1,10 +1,30 @@
 // initialize-from-dom.js
-// Reads initial "state" from the DOM (currently JSON-encoded SVG string)
+// Reads initial graph state from the DOM and stores it in graph-state.js
 
-const jsonElement = document.getElementById("graph-data");
-if (!jsonElement) {
-    throw new Error("Initial JSON state element not found in DOM");
+import { setGraphState } from './graph-state.js';
+
+/**
+ * Reads the JSON-encoded graph state from <script id="graph-data">
+ * and stores it in the SPA's graph state module
+ * @returns {Object} the initialized state
+ */
+export function initializeGraphFromDOM() {
+    const jsonElement = document.getElementById("graph-data");
+    if (!jsonElement) {
+        throw new Error("Initial JSON state element not found in DOM");
+    }
+
+    // Parse JSON string
+    const dataArray = JSON.parse(jsonElement.textContent);
+    const [nodes, adjacency] = dataArray;
+
+    const initialState = {
+        nodes: nodes || {},
+        adjacency: adjacency || {}
+    };
+
+    // Store in graph-state
+    setGraphState(initialState);
+
+    return initialState;
 }
-
-// Parse JSON string
-export const initialFromDOM = JSON.parse(jsonElement.textContent);

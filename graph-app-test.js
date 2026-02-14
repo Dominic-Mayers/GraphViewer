@@ -1,7 +1,7 @@
 // graph-app-test.js
 // Entrypoint – no exports
 
-import { initialFromDOM } from './initialize-from-dom.js';
+import { initialFromDOM } from './initialize-from-dom-test.js';
 import { renderSVG } from './render-svg.js';
 
 const container = document.getElementById('graph-container');
