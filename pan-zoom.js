@@ -1,3 +1,4 @@
+// assets/graph/pan-zoom.js
 import svgPanZoom from 'svg-pan-zoom';
 
 export function initPanZoom(container) {

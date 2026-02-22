@@ -1,25 +1,26 @@
-// render-state.js
-// Orchestrates rendering: graph state → DOT → SVG → DOM
-
+// assets/graph/render-state.js
 import { getGraphState } from './graph-state.js';
 import { state2dot } from './state2dot.js';
 import { generateSVG } from './graphviz.js';
 import { renderSVG } from './render-svg.js';
 
 /**
- * Renders the graph into a container.
- * @param {HTMLElement} container - DOM element to render SVG in
- * @param {Object|null} state - optional state to render; defaults to current graph state
+ * Render the graph state into a container.
+ * Part 2 compatible: no color-helper logic.
+ * 
+ * @param {HTMLElement} container
+ * @param {Object|null} state - optional state
+ * @param {boolean} [preserveView=true] - whether to keep pan/zoom
  */
-export async function renderState(container, state = null) {
+export async function renderState(container, state = null, preserveView = true) {
     const currentState = state || getGraphState();
 
-    // 1. State → DOT
+    // Convert state → DOT
     const dot = state2dot(currentState);
 
-    // 2. DOT → SVG string
+    // Convert DOT → SVG
     const svgString = await generateSVG(dot);
 
-    // 3. Insert SVG into container
-    renderSVG(container, svgString);
+    // Render SVG with optional view preservation
+    renderSVG(container, svgString, preserveView);
 }

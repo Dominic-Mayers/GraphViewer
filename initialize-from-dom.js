@@ -1,4 +1,4 @@
-// initialize-from-dom.js
+// assets/graph/initialize-from-dom.js
 // Reads initial graph state from the DOM and stores it in graph-state.js
 
 import { setGraphState } from './graph-state.js';
