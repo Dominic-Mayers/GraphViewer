@@ -94,7 +94,6 @@ function getGraphvizNodeWidth(label, weight = "bold", fontSizePt = 14, fontName 
   context.font = `${activeWeight} ${fontSizePt}pt "${family}", ${fallback}`;
   
   const pixelWidth = context.measureText(label).width;
-  
   // 4. Return width in inches (96 DPI with 20px safety buffer)
   return (pixelWidth + 20) / 96;
 }
