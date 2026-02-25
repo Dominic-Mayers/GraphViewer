@@ -4,7 +4,8 @@
 let graphState = {
     nodes: {},
     adjacency: {},
-    incoming: {}   // automatically maintained
+    incoming: {},   // automatically maintained
+    graphId: null
 };
 
 /**
