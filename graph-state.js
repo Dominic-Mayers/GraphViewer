@@ -8,10 +8,9 @@ let graphState = {
 };
 
 /**
- * Returns a deep copy of the current graph state
+ * Returns the current graph state
  */
 export function getGraphState() {
-    // return shallow copy for nodes and adjacency; internal code can access internal objects if needed
     return graphState;
 }
 
@@ -32,9 +31,14 @@ export function setGraphState(newState) {
  * @param {Object} params.addAdjacency - new adjacency { sourceId: { targetId: arrow } }
  * @param {Array} params.deleteNodes - nodeIds to remove
  * @param {Object} params.options
- *      options.incrementalIncoming (boolean) - if true, updates incoming incrementally; default false (full rebuild)
+ *      options.incrementalIncoming (boolean) - if true, updates incoming incrementally; default false
  */
-export function applyGraphTransformation({ addNodes = {}, addAdjacency = {}, deleteNodes = [], options = {} }) {
+export function applyGraphTransformation({
+    addNodes = {},
+    addAdjacency = {},
+    deleteNodes = [],
+    options = {}
+}) {
     const incremental = options.incrementalIncoming || false;
 
     // ---- 1. Delete nodes ----
@@ -43,6 +47,7 @@ export function applyGraphTransformation({ addNodes = {}, addAdjacency = {}, del
             delete graphState.nodes[nodeId];
             delete graphState.adjacency[nodeId];
         }
+
         // remove edges pointing to deleted nodes
         for (const src in graphState.adjacency) {
             for (const tgt of deleteNodes) {
@@ -62,7 +67,7 @@ export function applyGraphTransformation({ addNodes = {}, addAdjacency = {}, del
 
     // ---- 4. Update incoming ----
     if (incremental) {
-        updateIncomingIncremental(addAdjacency, deleteNodes);
+        updateIncomingIncremental(addNodes, addAdjacency, deleteNodes);
     } else {
         rebuildIncoming();
     }
@@ -86,21 +91,37 @@ function rebuildIncoming() {
 
 /**
  * Incrementally update the incoming map
+ * @param {Object} addNodes
  * @param {Object} addAdjacency
  * @param {Array} deleteNodes
  */
-function updateIncomingIncremental(addAdjacency = {}, deleteNodes = []) {
-    // 1. Remove all entries pointing to deleted nodes
-    for (const tgt of deleteNodes) {
-        delete graphState.incoming[tgt];
+function updateIncomingIncremental(
+    addNodes = {},
+    addAdjacency = {},
+    deleteNodes = []
+) {
+    // ---- 1. Remove deleted nodes from incoming ----
+
+    // Remove the node itself
+    for (const nodeId of deleteNodes) {
+        delete graphState.incoming[nodeId];
     }
-    for (const src in graphState.incoming) {
-        for (const tgt of deleteNodes) {
-            delete graphState.incoming[src]?.[tgt];
+
+    // Remove references pointing to deleted nodes
+    for (const tgt in graphState.incoming) {
+        for (const nodeId of deleteNodes) {
+            delete graphState.incoming[tgt]?.[nodeId];
         }
     }
 
-    // 2. Add new edges
+    // ---- 2. Initialize incoming entries for newly added nodes ----
+    for (const nodeId in addNodes) {
+        if (!graphState.incoming[nodeId]) {
+            graphState.incoming[nodeId] = {};
+        }
+    }
+
+    // ---- 3. Add new edges ----
     for (const src in addAdjacency) {
         for (const tgt in addAdjacency[src]) {
             graphState.incoming[tgt] = graphState.incoming[tgt] || {};
