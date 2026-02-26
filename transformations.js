@@ -1,6 +1,30 @@
 // assets/graph/transformations.js
-import { getGraphState, setGraphState } from './graph-state.js';
+import { getGraphState, getGraphId, setGraphState } from './graph-state.js';
 import { applyGraphTransformation } from './graph-helper.js';
+
+export async function expandGroup(nodeId, container) {
+    try {
+        const graphId = getGraphId();
+        const response = await fetch(`/expandGroup/${graphId}/${nodeId}`);
+        if (!response.ok) throw new Error('Failed to fetch subgraph');
+
+        const payload = await response.json();
+
+        applyGraphTransformation(
+            {
+                deleteNodes: payload.deleteNodes,
+                subgraph: {
+                    nodes: payload.subgraph.nodes,
+                    adjacency: payload.subgraph.adjacency
+                }
+            },
+            container
+        );
+
+    } catch (err) {
+        console.error('expandGroup failed:', err);
+    }
+}
 
 /**
  * Restrict the graph to all nodes reachable from a given start node.

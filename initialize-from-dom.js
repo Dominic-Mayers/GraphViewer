@@ -16,14 +16,13 @@ export function initializeGraphFromDOM() {
 
     // Parse JSON string
     const dataArray = JSON.parse(jsonElement.textContent);
-    const [nodes, adjacency, graphId] = dataArray;
 
     const initialState = {
-        nodes: nodes || {},
-        adjacency: adjacency || {},
-        graphId: graphId
+        nodes: dataArray.nodes || {},
+        adjacency: dataArray.adjacency || {},
+        graphId: dataArray.graphId
     };
-
+    console.log(initialState.graphId); 
     // Store in graph-state
     setGraphState(initialState);
     

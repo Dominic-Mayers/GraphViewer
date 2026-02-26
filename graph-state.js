@@ -2,11 +2,18 @@
 // Stores the SPA's structural graph state with unified transformation API
 
 let graphState = {
+    graphId: null,
     nodes: {},
     adjacency: {},
-    incoming: {},   // automatically maintained
-    graphId: null
+    incoming: {}   // automatically maintained
 };
+
+/**
+ * Get the graphId
+ */
+export function getGraphId() {
+    return graphState.graphId;
+}
 
 /**
  * Returns the current graph state
@@ -20,6 +27,7 @@ export function getGraphState() {
  * @param {Object} newState - { nodes: {...}, adjacency: {...} }
  */
 export function setGraphState(newState) {
+    graphState.graphId = newState.graphId ?? graphState.graphId;  
     graphState.nodes = newState.nodes || {};
     graphState.adjacency = newState.adjacency || {};
     rebuildIncoming();
