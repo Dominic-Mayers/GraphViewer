@@ -1,5 +1,5 @@
 // assets/graph/node-actions.js
-import { expandGroup, restrictToReachable } from './transformations.js';
+import { expandGroup, collapseGroup, restrictToReachable } from './transformations.js';
 
 /**
  * Returns menu items for a given node.
@@ -17,6 +17,13 @@ export function getNodeMenuItems(node, nodeId, container) {
         });
     }
 
+    if (node.groupId) {
+        items.push({
+            text: 'Collapse group',
+            action: () => collapseGroup(nodeId, container)
+        });
+    }
+    
     items.push({
         text: 'Restrict to reachable',
         action: () => restrictToReachable(nodeId, container)
