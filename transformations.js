@@ -1,6 +1,6 @@
 // assets/graph/transformations.js
 import { getGraphState, getGraphId, setGraphState } from './graph-state.js';
-import { applyGraphTransformation } from './graph-helper.js';
+import { applyGraphTransformation } from './transformation-helper.js';
 
 export async function expandGroup(nodeId, container) {
     try {

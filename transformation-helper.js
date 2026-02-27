@@ -1,4 +1,4 @@
-// assets/graph/graph-helper.js
+// assets/graph/transformation-helper.js
 import { getGraphState, setGraphState } from './graph-state.js';
 import { renderState } from './render-state.js';
 

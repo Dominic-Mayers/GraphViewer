@@ -2,7 +2,7 @@
 import { initializeGraphFromDOM } from './initialize-from-dom.js';
 import { renderState } from './render-state.js';
 // Test
-//import { applyGraphTransformation } from './graph-helper.js';
+//import { applyGraphTransformation } from './transformation-helper.js';
 import { restrictToReachable } from './transformations.js'; 
 
 const container = document.getElementById('graph-container');
