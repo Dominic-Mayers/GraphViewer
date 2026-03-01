@@ -2,7 +2,7 @@
 // Stores the SPA's structural graph state with unified transformation API
 
 // Maybe eventually the state will be a dictionary indexed by graphId. 
-// The state knows it graphId and it is needed to fetch the server. 
+// The state knows its graphId and it is needed to fetch the server. 
 
 let graphState = {
     graphId: null,
@@ -10,7 +10,6 @@ let graphState = {
     adjacency: {},
     incoming: {}   // automatically maintained
 };
-
 /**
  * Get the graphId (Npt needed now.)
  */
@@ -30,7 +29,7 @@ export function getGraphState() {
  * @param {Object} newState - { nodes: {...}, adjacency: {...} }
  */
 export function setGraphState(newState) {
-    graphState.graphId = newState.graphId ?? graphState.graphId;  
+    graphState.graphId = newState.graphId ?? graphState.graphId;
     graphState.nodes = newState.nodes || {};
     graphState.adjacency = newState.adjacency || {};
     rebuildIncoming();
@@ -44,17 +43,17 @@ export function applyDelta(delta) {
     delta.options ??= {};
     delta.options.incrementalIncoming = true;
     const graphState = applyGraphTransformation(delta);
-    return  graphState; 
+    return  graphState;
 }
 
 
-export function applyGraphTransformation({
-    addNodes = {},
-    addAdjacency = {},
-    deleteNodes = [],
-    options = {incrementalIncoming: true} 
+export function applyGraphTransformation( {
+addNodes = {},
+        addAdjacency = {},
+        deleteNodes = [],
+        options = {incrementalIncoming: true}
 }) {
-    
+
     const incremental = options.incrementalIncoming || false;
 
     // ---- 1. Delete nodes ----
@@ -91,18 +90,18 @@ export function applyGraphTransformation({
     return graphState;
 }
 
- /**
+/**
  * Incrementally update the incoming map
  * @param {Object} addNodes
  * @param {Object} addAdjacency
  * @param {Array} deleteNodes
  */
- function updateIncomingIncremental(addNodes = {}, addAdjacency = {}, deleteNodes = []) {
-     // 1. Remove deleted nodes from incoming
-     for (const nodeId of deleteNodes) {
-         delete graphState.incoming[nodeId];
-     }
-     for (const tgt in graphState.incoming) {
+function updateIncomingIncremental(addNodes = {}, addAdjacency = {}, deleteNodes = []) {
+    // 1. Remove deleted nodes from incoming
+    for (const nodeId of deleteNodes) {
+        delete graphState.incoming[nodeId];
+    }
+    for (const tgt in graphState.incoming) {
         for (const nodeId of deleteNodes) {
             delete graphState.incoming[tgt]?.[nodeId];
         }
@@ -110,7 +109,8 @@ export function applyGraphTransformation({
 
     // 2. Initialize incoming for new nodes
     for (const nodeId in addNodes) {
-        if (!graphState.incoming[nodeId]) graphState.incoming[nodeId] = {};
+        if (!graphState.incoming[nodeId])
+            graphState.incoming[nodeId] = {};
     }
 
     // 3. Add edges
@@ -119,44 +119,20 @@ export function applyGraphTransformation({
             graphState.incoming[tgt] = graphState.incoming[tgt] || {};
             graphState.incoming[tgt][src] = addAdjacency[src][tgt];
         }
-    }
+}
 }
 
 /**
-* Fully rebuilds the incoming map from current adjacency
-*/
+ * Fully rebuilds the incoming map from current adjacency
+ */
 function rebuildIncoming() {
     const incoming = {};
     for (const src in graphState.adjacency) {
         for (const tgt in graphState.adjacency[src]) {
-            if (!incoming[tgt]) incoming[tgt] = {};
+            if (!incoming[tgt])
+                incoming[tgt] = {};
             incoming[tgt][src] = graphState.adjacency[src][tgt];
         }
     }
     graphState.incoming = incoming;
-}
-
-function filterValidAdjacency(addAdjacency, addNodes, deleteNodes) {
-    const result = {};
-
-    // Build the final node set
-    const finalNodes = new Set(Object.keys(graphState.nodes));
-
-    // Apply deletions
-    deleteNodes.forEach(id => finalNodes.delete(id));
-
-    // Apply additions
-    Object.keys(addNodes).forEach(id => finalNodes.add(id));
-
-    // Filter arrows
-    for (const src in addAdjacency) {
-        for (const tgt in addAdjacency[src]) {
-            if (finalNodes.has(src) && finalNodes.has(tgt)) {
-                result[src] = result[src] || {};
-              result[src][tgt] = addAdjacency[src][tgt];
-            }
-        }
-    }
-
-    return result;
 }

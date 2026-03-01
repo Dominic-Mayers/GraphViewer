@@ -1,5 +1,6 @@
 // assets/graph/node-actions.js
 import { expandGroup, collapseGroup, restrictToReachable } from './transformations.js';
+import { applyTransformationAndRender } from './transformation-rendering.js';
 
 /**
  * Returns menu items for a given node.
@@ -23,12 +24,18 @@ export function getNodeMenuItems(node, nodeId, container) {
             action: () => collapseGroup(nodeId, container)
         });
     }
-    
+
     items.push({
         text: 'Restrict to reachable',
-        action: () => restrictToReachable(nodeId, container)
+        action: () =>
+            applyTransformationAndRender(
+                    restrictToReachable,
+                    [nodeId],
+                    container
+                    )
     });
 
     // Additional node-dependent actions can be added here
+
     return items;
 }
