@@ -10,6 +10,6 @@ export function initPanZoom(container) {
 
     return svgPanZoom(svg, {
         zoomEnabled: true,
-        controlIconsEnabled: false
+        controlIconsEnabled: true
     });
 }

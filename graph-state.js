@@ -1,5 +1,8 @@
-// graph-state.js
+// assets/graph-state.js
 // Stores the SPA's structural graph state with unified transformation API
+
+// Maybe eventually the state will be a dictionary indexed by graphId. 
+// The state knows its graphId and it is needed to fetch the server. 
 
 let graphState = {
     graphId: null,
@@ -7,9 +10,8 @@ let graphState = {
     adjacency: {},
     incoming: {}   // automatically maintained
 };
-
 /**
- * Get the graphId
+ * Get the graphId (Npt needed now.)
  */
 export function getGraphId() {
     return graphState.graphId;
@@ -27,27 +29,31 @@ export function getGraphState() {
  * @param {Object} newState - { nodes: {...}, adjacency: {...} }
  */
 export function setGraphState(newState) {
-    graphState.graphId = newState.graphId ?? graphState.graphId;  
+    graphState.graphId = newState.graphId ?? graphState.graphId;
     graphState.nodes = newState.nodes || {};
     graphState.adjacency = newState.adjacency || {};
     rebuildIncoming();
 }
 
 /**
- * Applies incremental or full graph transformations
- * @param {Object} params
- * @param {Object} params.addNodes - new nodes to add { nodeId: nodeObj }
- * @param {Object} params.addAdjacency - new adjacency { sourceId: { targetId: arrow } }
- * @param {Array} params.deleteNodes - nodeIds to remove
- * @param {Object} params.options
- *      options.incrementalIncoming (boolean) - if true, updates incoming incrementally; default false
+ * Wrapper over applyGraphTransformation with incrementalIncoming = true
+ * @param {Object} delta - delta of applyGraphTransformation
  */
-export function applyGraphTransformation({
-    addNodes = {},
-    addAdjacency = {},
-    deleteNodes = [],
-    options = {}
+export function applyDelta(delta) {
+    delta.options ??= {};
+    delta.options.incrementalIncoming = true;
+    const graphState = applyGraphTransformation(delta);
+    return  graphState;
+}
+
+
+export function applyGraphTransformation( {
+addNodes = {},
+        addAdjacency = {},
+        deleteNodes = [],
+        options = {incrementalIncoming: true}
 }) {
+
     const incremental = options.incrementalIncoming || false;
 
     // ---- 1. Delete nodes ----
@@ -57,7 +63,7 @@ export function applyGraphTransformation({
             delete graphState.adjacency[nodeId];
         }
 
-        // remove edges pointing to deleted nodes
+        // Remove edges pointing to deleted nodes
         for (const src in graphState.adjacency) {
             for (const tgt of deleteNodes) {
                 delete graphState.adjacency[src]?.[tgt];
@@ -68,7 +74,7 @@ export function applyGraphTransformation({
     // ---- 2. Add nodes ----
     Object.assign(graphState.nodes, addNodes);
 
-    // ---- 3. Add adjacency ----
+    // ---- 3. Merge valid adjacency ----
     for (const src in addAdjacency) {
         graphState.adjacency[src] = graphState.adjacency[src] || {};
         Object.assign(graphState.adjacency[src], addAdjacency[src]);
@@ -85,56 +91,48 @@ export function applyGraphTransformation({
 }
 
 /**
- * Fully rebuilds the incoming map from current adjacency
- */
-function rebuildIncoming() {
-    const incoming = {};
-    for (const src in graphState.adjacency) {
-        for (const tgt in graphState.adjacency[src]) {
-            if (!incoming[tgt]) incoming[tgt] = {};
-            incoming[tgt][src] = graphState.adjacency[src][tgt];
-        }
-    }
-    graphState.incoming = incoming;
-}
-
-/**
  * Incrementally update the incoming map
  * @param {Object} addNodes
  * @param {Object} addAdjacency
  * @param {Array} deleteNodes
  */
-function updateIncomingIncremental(
-    addNodes = {},
-    addAdjacency = {},
-    deleteNodes = []
-) {
-    // ---- 1. Remove deleted nodes from incoming ----
-
-    // Remove the node itself
+function updateIncomingIncremental(addNodes = {}, addAdjacency = {}, deleteNodes = []) {
+    // 1. Remove deleted nodes from incoming
     for (const nodeId of deleteNodes) {
         delete graphState.incoming[nodeId];
     }
-
-    // Remove references pointing to deleted nodes
     for (const tgt in graphState.incoming) {
         for (const nodeId of deleteNodes) {
             delete graphState.incoming[tgt]?.[nodeId];
         }
     }
 
-    // ---- 2. Initialize incoming entries for newly added nodes ----
+    // 2. Initialize incoming for new nodes
     for (const nodeId in addNodes) {
-        if (!graphState.incoming[nodeId]) {
+        if (!graphState.incoming[nodeId])
             graphState.incoming[nodeId] = {};
-        }
     }
 
-    // ---- 3. Add new edges ----
+    // 3. Add edges
     for (const src in addAdjacency) {
         for (const tgt in addAdjacency[src]) {
             graphState.incoming[tgt] = graphState.incoming[tgt] || {};
             graphState.incoming[tgt][src] = addAdjacency[src][tgt];
         }
+}
+}
+
+/**
+ * Fully rebuilds the incoming map from current adjacency
+ */
+function rebuildIncoming() {
+    const incoming = {};
+    for (const src in graphState.adjacency) {
+        for (const tgt in graphState.adjacency[src]) {
+            if (!incoming[tgt])
+                incoming[tgt] = {};
+            incoming[tgt][src] = graphState.adjacency[src][tgt];
+        }
     }
+    graphState.incoming = incoming;
 }
