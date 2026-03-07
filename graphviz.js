@@ -1,5 +1,5 @@
 // assets/graph/graphviz.js
-import { Graphviz } from "@hpcc-js/wasm"; // adjust relative path if needed
+import { Graphviz } from "@hpcc-js/wasm-graphviz"; // adjust relative path if needed
 
 /**
  * Generate an SVG string from a DOT string using Graphviz.

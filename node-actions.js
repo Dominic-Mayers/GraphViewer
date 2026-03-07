@@ -1,6 +1,7 @@
 // assets/graph/node-actions.js
-import { expandGroup, collapseGroup, restrictToReachable } from './transformations.js';
-import { applyTransformationAndRender } from './transformation-rendering.js';
+import { expandGroup, collapseGroup } from "./transformations-api.js";
+import { restrictToReachableWithUndo } from "./transformations-with-undo.js";
+import { applyTransformationAndRender } from "./transformation-rendering.js";
 
 /**
  * Returns menu items for a given node.
@@ -9,33 +10,29 @@ import { applyTransformationAndRender } from './transformation-rendering.js';
  * @param {HTMLElement} container - The graph container
  */
 export function getNodeMenuItems(node, nodeId, container) {
-    const items = [];
+  const items = [];
 
-    if (node.isGroup) {
-        items.push({
-            text: 'Expand group',
-            action: () => expandGroup(nodeId, container)
-        });
-    }
-
-    if (node.groupId) {
-        items.push({
-            text: 'Collapse group',
-            action: () => collapseGroup(nodeId, container)
-        });
-    }
-
+  if (node.isGroup) {
     items.push({
-        text: 'Restrict to reachable',
-        action: () =>
-            applyTransformationAndRender(
-                    restrictToReachable,
-                    [nodeId],
-                    container
-                    )
+      text: "Expand group",
+      action: () =>
+        applyTransformationAndRender(expandGroup, [nodeId], container, { preserveView: false })
     });
+  }
 
-    // Additional node-dependent actions can be added here
+  if (node.groupId) {
+    items.push({
+      text: "Collapse group",
+      action: () =>
+        applyTransformationAndRender(collapseGroup, [nodeId], container, { preserveView: false })
+    });
+  }
 
-    return items;
+  items.push({
+    text: "Restrict to reachable",
+    action: () =>
+      applyTransformationAndRender(restrictToReachableWithUndo, [nodeId], container, { preserveView: false })
+  });
+
+  return items;
 }

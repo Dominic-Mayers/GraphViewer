@@ -22,9 +22,9 @@ export function initializeGraphFromDOM() {
         adjacency: dataArray.adjacency || {},
         graphId: dataArray.graphId
     };
-    console.log(initialState.graphId); 
+    console.log(initialState.graphId);
     // Store in graph-state
     setGraphState(initialState);
-    
+
     return initialState;
 }

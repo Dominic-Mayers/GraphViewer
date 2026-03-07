@@ -1,27 +1,38 @@
 // assets/graph/transformation-rendering.js
-import { renderState } from './render-state.js';
+//
+// Orchestrates: run a transformation (state mutation) → render pipeline.
+// Transformations must NOT render themselves; they only mutate graph-state.
+//
+// Policy remains here (e.g., preserveView).
+
+import { renderState } from "./render-state.js";
 
 /**
- * Rendering layer wrapper.
- * Executes a transformation and then renders.
+ * Execute a transformation and then render.
  *
- * Prototype version:
- * - Assumes stateChanged = true
- * - Hard-codes preserveView = false
- *
- * @param {Function} transformation - function to execute
- * @param {Array} args - arguments for transformation
- * @param {HTMLElement} container - graph container
+ * @param {Function} transformationFn - may be sync or async; must mutate graph-state
+ * @param {Array} args - arguments to pass to the transformationFn
+ * @param {HTMLElement} container
+ * @param {Object} [options]
+ * @param {boolean} [options.preserveView=false]
  */
-export async function applyTransformationAndRender(transformation, args, container) {
-    try {
-        // Execute transformation (state mutation only)
-        await transformation(...args);
+export async function applyTransformationAndRender(
+  transformationFn,
+  args = [],
+  container,
+  { preserveView = false } = {}
+) {
+  console.log("apply transformation and render"); 
+  if (!container) throw new Error("applyTransformationAndRender: container is required");
+  if (typeof transformationFn !== "function") {
+    throw new Error("applyTransformationAndRender: transformationFn must be a function");
+  }
 
-        // Always re-render, do NOT preserve view (prototype safety)
-        await renderState(container, null, false);
+  // 1) Mutate state
+  await transformationFn(...args);
 
-    } catch (err) {
-        console.error('Transformation failed:', err);
-    }
+  // 2) Render from current graph-state
+  console.log('Before renderState');
+  await renderState(container, null, preserveView);
+  console.log('After renderState');
 }
