@@ -53,6 +53,7 @@ export async function collapseGroup(groupId) {
  * Mutates graph state only; rendering is handled elsewhere.
  */
 export function restrictToReachable(startNodeId) {
+  console.log('Major with node', startNodeId );   
   const state = getGraphState();
 
   const visited = new Set();
@@ -96,14 +97,11 @@ export function restrictToReachable(startNodeId) {
  * Mutates graph state only; rendering is handled elsewhere.
  */
 export async function getServerStateAndSave(url) {
-  console.log('Before fetch'); 
   const payload = await fetchGraph(url);
 
-  console.log('Before setGraphState'); 
   setGraphState({
     graphId: payload.graphId,
     nodes: payload.nodes,
     adjacency: payload.adjacency
   });
-  console.log('After setGraphState'); 
 }

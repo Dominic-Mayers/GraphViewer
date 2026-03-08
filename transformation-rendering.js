@@ -22,7 +22,6 @@ export async function applyTransformationAndRender(
   container,
   { preserveView = false } = {}
 ) {
-  console.log("apply transformation and render"); 
   if (!container) throw new Error("applyTransformationAndRender: container is required");
   if (typeof transformationFn !== "function") {
     throw new Error("applyTransformationAndRender: transformationFn must be a function");
@@ -32,7 +31,5 @@ export async function applyTransformationAndRender(
   await transformationFn(...args);
 
   // 2) Render from current graph-state
-  console.log('Before renderState');
   await renderState(container, null, preserveView);
-  console.log('After renderState');
 }

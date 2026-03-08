@@ -37,7 +37,8 @@ export async function fetchGraph(url) {
   }
 
   const payload = await response.json();
-
+  
+  console.log('In fetchGraph, got payload for', url); 
   return {
     graphId: payload.graphId,
     nodes: payload.nodes || {},
