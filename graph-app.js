@@ -1,6 +1,6 @@
 // assets/graph/graph-app.js
 
-import { initializeGraphFromDOM } from "./initialize-from-dom.js";
+import { initializeGraphFromDOM } from "./initialize-from-html.js";
 import { renderState } from "./render-state.js";
 import { initUndoManager } from "./undo-manager-config.js";
 
