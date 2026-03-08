@@ -1,205 +1,214 @@
 // assets/graph/transformations-with-undo.js
 
 import UndoManager from "undo-manager";
-import { getGraphState, setGraphState, getGraphId } from "./graph-state.js";
-import { fetchGraph } from "./graph-server-api.js";
-import { getServerStateAndSave } from "./transformations-api.js";
-import { restrictToReachable } from "./transformations-api.js";
 
-// Module-owned undo manager
+import { getGraphId, getGraphState, setGraphState } from "./graph-state.js";
+import {
+    restrictToReachable,
+    getServerStateAndSave,
+} from "./transformations-api.js";
+
 const undoManager = new UndoManager();
-undoManager.setCallback(() => {
-  console.log("callback fired");
-});
+
+function noop() {}
 
 /**
- * Add a synthetic checkpoint command to the undo manager.
- *
- * The new checkpoint represents the clean canonical state fetched from `url`.
- * Its undo replays the previous checkpoint's redo command.
- *
- * Assumptions:
- * - The undo stack has already been initialized with an initial checkpoint.
- * - Therefore, when this function is called, there is always a previous command.
- *
- * @param {UndoManager} undoManager
- * @param {string} url
+ * Return the array of commands if the library exposes it.
+ * We rely on getCommands() in the current baseline.
  */
-function addCheckpoint(url) {
-    if (!undoManager) {
-        throw new Error("addCheckpoint: undoManager is required");
+function getCommands() {
+    const commands = undoManager.getCommands?.();
+    if (!Array.isArray(commands)) {
+        throw new Error("undo-manager getCommands() is unavailable");
     }
-    if (!url || typeof url !== "string") {
-        throw new Error("addCheckpoint: url must be a non-empty string");
-    }
-
-    const previousCommand = undoManager.getCommands().at(-1);
-
-    if (!previousCommand || typeof previousCommand.redo !== "function") {
-        throw new Error("addCheckpoint: previous checkpoint command is missing or invalid");
-    }
-
-    undoManager.add({
-        // UNDO: go back to the previous clean checkpoint state
-        undo: async () => {
-            await previousCommand.redo();
-        },
-
-        // REDO: fetch and install the new clean checkpoint state
-        redo: async () => {
-            await getServerStateAndSave(url);
-        }
-    });
+    return commands;
 }
 
 /**
- * Compare two graph-state snapshots.
- * getGraphState() and fetchGraph() both return plain detached data.
+ * The current checkpoint is the last command in the stack representation
+ * used by the baseline.
  */
-function sameState(a, b) {
-    return JSON.stringify(a) === JSON.stringify(b);
-}
-
-export function redo() {
-    undoManager.redo();
-}
-
-
-
-export async function restrictToReachableWithUndo(nodeId) {
-  const graphId = getGraphId();
-
-  if (!graphId) {
-    throw new Error("restrictToReachableWithUndo: graphId is missing");
-  }
-  if (!nodeId) {
-    throw new Error("restrictToReachableWithUndo: nodeId is required");
-  }
-
-  const url = `/graph/${graphId}/${nodeId}`;
-  await transformAndCheckpoint(restrictToReachable, [nodeId], url);
+function getCurrentCommand() {
+    const commands = getCommands();
+    return commands.at(-1) ?? null;
 }
 
 /**
- * Materialize a JIT tail.
- *
- * This version does not decide whether the tail is needed.
- * It assumes the caller already checked that dirtyState and cleanState differ.
- *
- * @param {Function} checkpointRedoFn - the redo function of the current checkpoint
- * @param {Object} dirtyState - current dirty graph snapshot
+ * Build a dummy history token.
+ * The token itself is inert; the real executable meaning is in token.cmd.
  */
-export function addTail(checkpointRedoFn, dirtyState) {
-    if (typeof checkpointRedoFn !== "function" || !checkpointRedoFn.url) {
-        throw new Error("addTail: checkpointRedoFn must be a function with a url property");
-    }
-
-    undoManager.add({
-        // Undoing the tail restores the current clean checkpoint state
-        undo: checkpointRedoFn,
-
-        // Redoing the tail restores the dirty state captured before undo
-        redo: async () => {
-            setGraphState(dirtyState);
-        }
-    });
-}
-
-export async function undoWithAddTail() {
-  const commands = undoManager.getCommands();
-  const index = undoManager.getIndex();
-
-  if (index < 0 || commands.length === 0) {
-    return false;
-  }
-
-  const redoStackIsEmpty = index === commands.length - 1;
-
-  if (redoStackIsEmpty) {
-    const currentCommand = commands[index];
-    const checkpointRedoFn = currentCommand?.redo;
-
-    if (typeof checkpointRedoFn !== "function" || !checkpointRedoFn.url) {
-      throw new Error("undoWithAddTail: current checkpoint redo has no url");
-    }
-
-    const dirtyState = getGraphState();
-    const cleanState = await fetchGraph(checkpointRedoFn.url);
-
-    if (JSON.stringify(dirtyState) !== JSON.stringify(cleanState)) {
-      addTail(checkpointRedoFn, dirtyState);
-      undoManager.undo();
-      return true;
-    }
-  }
-
-  // At this point, no tail was added.
-  // So undoing index 0 would mean undoing the initial checkpoint itself,
-  // which must never happen.
-  if (index === 0) {
-    return false;
-  }
-
-  undoManager.undo();
-  return true;
+function makeToken(cmd, extra = {}) {
+    const token = noop;
+    token.cmd = cmd;
+    Object.assign(token, extra);
+    return token;
 }
 
 /**
- * Execute a transformation, then append its synthetic checkpoint.
- *
- * Responsibilities:
- * - run the actual transformation (sync or async)
- * - append the corresponding checkpoint command
- *
- * Non-responsibilities:
- * - rendering
- * - DOM/view policy
- *
- * @param {Function} transformationFn
- * @param {Array} args
- * @param {string} url - canonical checkpoint URL for the clean state
- * @returns {Promise<void>}
- */
-async function transformAndCheckpoint(transformationFn, args = [], url) {
-  if (typeof transformationFn !== "function") {
-    throw new Error("transformAndCheckpoint: transformationFn must be a function");
-  }
-  if (!url || typeof url !== "string") {
-    throw new Error("transformAndCheckpoint: url must be a non-empty string");
-  }
-
-  // 1) Execute the actual transformation
-  await transformationFn(...args);
-
-  // 2) Record the synthetic checkpoint reached by this transformation
-  addCheckpoint(url);
-}
-
-/**
- * Initialize the undo-manager stacks with the initial checkpoint.
- *
- * The initial checkpoint represents the canonical initial graph state.
- * Its redo fetches /graph/{graphId}.
- * Its undo must never be executed.
+ * Initial synthetic checkpoint.
+ * It records deferred meaning only; it does not fetch now.
  */
 export function initUndoRedoStacks() {
     const graphId = getGraphId();
-
     if (!graphId) {
         throw new Error("initUndoRedoStacks: graphId is missing");
     }
 
     const url = `/graph/${graphId}`;
 
-    const redo = async () => {
-        await getServerStateAndSave(url);
-    };
-    redo.url = url;
-
-    undoManager.add({
-        undo: async () => {
-            throw new Error("Initial checkpoint cannot be undone");
-        },
-        redo
+    const undo = makeToken(async () => {
+        throw new Error("Initial checkpoint cannot be undone");
     });
+
+    const redo = makeToken(
+        async () => {
+            await getServerStateAndSave(url);
+        },
+        { url }
+    );
+
+    undoManager.add({ undo, redo });
 }
+
+/**
+ * Add a checkpoint after a transformation.
+ * This only records commands; it does not execute anything now.
+ */
+function addCheckpoint(url) {
+    if (!url || typeof url !== "string") {
+        throw new Error("addCheckpoint: url must be a non-empty string");
+    }
+
+    const previousCommand = getCurrentCommand();
+    if (!previousCommand?.redo?.cmd) {
+        throw new Error("addCheckpoint: previous redo.cmd is missing");
+    }
+
+    // Undo of the new checkpoint = command represented by previous redo
+    const undo = makeToken(previousCommand.redo.cmd, {
+        url: previousCommand.redo.url,
+    });
+
+    // Redo of the new checkpoint = fetch the cleaned state for this checkpoint
+    const redo = makeToken(
+        async () => {
+            await getServerStateAndSave(url);
+        },
+        { url }
+    );
+
+    undoManager.add({ undo, redo });
+}
+
+/**
+ * Execute a transformation, then register its synthetic checkpoint.
+ * This is still the proper place to add checkpoints.
+ */
+async function transformAndCheckpoint(transformation, args = [], url) {
+    await transformation(...args);
+    addCheckpoint(url);
+}
+
+/**
+ * Example exported transformation with undo support.
+ * Adjust the URL logic if your cleaned checkpoint route differs.
+ */
+export async function restrictToReachableWithUndo(nodeId) {
+    const graphId = getGraphId();
+    if (!graphId) {
+        throw new Error("restrictToReachableWithUndo: graphId is missing");
+    }
+
+    const url = `/graph/${graphId}/${nodeId}`;
+    await transformAndCheckpoint(restrictToReachable, [nodeId], url);
+}
+
+/**
+ * Materialize the dirty tail.
+ *
+ * checkpointRedoFn: the redo token of the current checkpoint
+ * dirtyState: snapshot of the current dirty graph state
+ */
+function addTail(checkpointRedoFn, dirtyState) {
+    if (!checkpointRedoFn?.cmd) {
+        throw new Error("addTail: checkpoint redo.cmd is missing");
+    }
+    if (!dirtyState) {
+        throw new Error("addTail: dirtyState is required");
+    }
+
+    const undo = makeToken(checkpointRedoFn.cmd, {
+        url: checkpointRedoFn.url,
+    });
+
+    const redo = makeToken(async () => {
+        setGraphState(dirtyState);
+    });
+
+    undoManager.add({ undo, redo });
+}
+
+/**
+ * Execute redo in the correct order:
+ * 1. await the real command
+ * 2. move the undo-manager stack with the dummy redo
+ */
+export async function redo() {
+    if (!undoManager.hasRedo()) {
+        return;
+    }
+
+    const command = getCurrentCommand();
+    if (!command?.redo?.cmd) {
+        throw new Error("redo: current redo.cmd is missing");
+    }
+
+    await command.redo.cmd();
+    undoManager.redo();
+}
+
+/**
+ * Execute undo with possible JIT tail materialization.
+ *
+ * Rule:
+ * - if redo stack is empty and there is a dirty tail, materialize it first
+ * - then execute the current undo command
+ * - only after success move the stack with dummy undo
+ */
+export async function undoWithAddTail() {
+    if (!undoManager.hasUndo()) {
+        return;
+    }
+
+    const currentCommand = getCurrentCommand();
+    if (!currentCommand?.undo?.cmd) {
+        throw new Error("undoWithAddTail: current undo.cmd is missing");
+    }
+
+    // JIT delta-tail when redo stack is empty
+    if (!undoManager.hasRedo()) {
+        const dirtyState = getGraphState();
+
+        // The current checkpoint redo describes the cleaned state to compare against.
+        const checkpointRedoFn = currentCommand.redo;
+        if (!checkpointRedoFn?.cmd) {
+            throw new Error("undoWithAddTail: current redo.cmd is missing");
+        }
+
+        // Minimal pragmatic version:
+        // if you decide a dirty tail exists whenever current state is not a checkpoint state,
+        // materialize it here. This version assumes that when redo stack is empty,
+        // the current visible state is a dirty tail relative to the current checkpoint.
+        addTail(checkpointRedoFn, dirtyState);
+    }
+
+    const commandToUndo = getCurrentCommand();
+    if (!commandToUndo?.undo?.cmd) {
+        throw new Error("undoWithAddTail: effective undo.cmd is missing");
+    }
+
+    await commandToUndo.undo.cmd();
+    undoManager.undo();
+}
+
+export { undoManager };
