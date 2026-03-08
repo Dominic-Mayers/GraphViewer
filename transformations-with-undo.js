@@ -1,12 +1,8 @@
 // assets/graph/transformations-with-undo.js
 
 import UndoManager from "undo-manager";
-
 import { getGraphId, getGraphState, setGraphState } from "./graph-state.js";
-import {
-    restrictToReachable,
-    getServerStateAndSave,
-} from "./transformations-api.js";
+import { restrictToReachable, getServerStateAndSave} from "./transformations-api.js";
 
 const undoManager = new UndoManager();
 
