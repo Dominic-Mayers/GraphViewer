@@ -12,4 +12,4 @@ export async function fetchAndSetCheckpoint(url) {
   return snapshot;
 }
 
-window.fetchAndSetCheckpoint = fetchAndSetCheckpoint; 
+window.fetchAndSetCheckpoint = fetchAndSetCheckpoint;
