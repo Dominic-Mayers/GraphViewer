@@ -5,16 +5,28 @@
 
 let graphState = {
   graphId: null,
+  saveId: null, 
+  isCanonical : false,
+  isCheckpoint : false,
   nodes: {},
   adjacency: {},
   incoming: {} // derived index; owned + maintained here
 };
+
+let saveId = 0; 
 
 /**
  * Get the graphId
  */
 export function getGraphId() {
   return graphState.graphId;
+}
+
+/**
+ * Get the saveId
+ */
+export function getSaveId() {
+  return graphState.saveId;
 }
 
 /**
@@ -25,13 +37,25 @@ export function getGraphState() {
   return snapshotState(graphState);
 }
 
+function setHistoryInfo (canonical = false, isCheckpoint = false) {
+    if (canonical) {
+        console.log('Consuming saveId ', saveId); 
+    }
+    graphState.isCanonical = canonical; 
+    graphState.saveId = canonical ? saveId++ : null;
+    graphState.isCheckpoint = canonical && isCheckpoint;
+}
+  
 /**
  * Authoritative replace of the whole state.
  * This is NOT a delta application and should not compute deltas.
  *
  * @param {Object} newState - { graphId, nodes, adjacency }
+ * @param {bool} canonical - tells whether to set a saveId or nullify it.
+ * @param {bool} isCheckpoint - tells whether the save is part of the history.
  */
-export function setGraphState(newState) {
+export function setGraphState(newState, canonical = false, isCheckpoint = false) {
+  setHistoryInfo(canonical, isCheckpoint);   
   graphState.graphId = newState.graphId ?? graphState.graphId;
   graphState.nodes = newState.nodes || {};
   graphState.adjacency = newState.adjacency || {};
@@ -44,9 +68,10 @@ export function setGraphState(newState) {
  */
 export function applyDelta(
   { addNodes = {}, addAdjacency = {}, deleteNodes = [], deleteAdjacency = {} },
-  options = { incrementalIncoming: true }
+  options = { incrementalIncoming: true }, canonical = false, isCheckpoint = false
 ) {
   const incremental = options.incrementalIncoming ?? false;
+  setHistoryInfo(canonical, isCheckpoint);   
 
   // ---- 0. Delete edges explicitly requested ----
   // Supports:

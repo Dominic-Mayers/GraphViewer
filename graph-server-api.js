@@ -8,6 +8,20 @@
 //   1) Graph payloads (authoritative state)
 //   2) Delta payloads (instructions for mutating current state)
 
+function getCallerName() {
+  try {
+    throw new Error();
+  } catch (e) {
+    // The stack trace string needs to be parsed
+    // The exact format varies slightly by browser
+    const stackLines = e.stack.split('\n');
+    // The third line typically contains the calling function information
+    // (the first two lines are "Error" and the current function)
+    const callerInfo = stackLines[2].trim(); 
+    return callerInfo;
+  }
+}
+
  /**
   * Fetch a full graph payload from the server.
   * Intended for authoritative states such as:
@@ -38,7 +52,7 @@ export async function fetchGraph(url) {
 
   const payload = await response.json();
   
-  console.log('In fetchGraph, got payload for', url); 
+  console.log('From ', getCallerName(), ' ; fetchGraph, got payload for', url); 
   return {
     graphId: payload.graphId,
     nodes: payload.nodes || {},

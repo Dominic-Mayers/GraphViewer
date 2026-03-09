@@ -29,14 +29,15 @@ function initUndoRedoListener(container) {
     // Undo: Ctrl/Cmd + Z
     if (key === "z" && !shift) {
       event.preventDefault();
-      console.log('Start Ctrl-z'); 
+      console.log('Start Ctrl-z');
       await applyTransformationAndRender(
         undoWithAddTail,
         [],
         container,
         { preserveView: false }
       );
-      console.log('End Ctrl-z'); 
+
+      console.log('End Ctrl-z');
       return;
     }
 

@@ -52,7 +52,7 @@ export async function collapseGroup(groupId) {
  * Local-only: restrict graph to nodes reachable from startNodeId.
  * Mutates graph state only; rendering is handled elsewhere.
  */
-export function restrictToReachable(startNodeId) {
+export function restrictToReachable(startNodeId, isCheckpoint = false) {
   console.log('Major with node', startNodeId );   
   const state = getGraphState();
 
@@ -88,7 +88,7 @@ export function restrictToReachable(startNodeId) {
 
   const deleteNodes = Object.keys(state.nodes).filter(id => !visited.has(id));
 
-  applyDelta({ addNodes, addAdjacency, deleteNodes });
+  applyDelta({ addNodes, addAdjacency, deleteNodes }, true, isCheckpoint);
 }
 
 /**
