@@ -98,10 +98,11 @@ export function restrictToReachable(startNodeId, isCheckpoint = false) {
  */
 export async function getServerStateAndSave(url) {
   const payload = await fetchGraph(url);
-
+  ; 
   setGraphState({
     graphId: payload.graphId,
     nodes: payload.nodes,
     adjacency: payload.adjacency
   });
+  ;
 }

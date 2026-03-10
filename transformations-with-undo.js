@@ -3,10 +3,7 @@
 import UndoManager from "undo-manager";
 
 import { getGraphId, getGraphState, setGraphState } from "./graph-state.js";
-import {
-    restrictToReachable,
-    getServerStateAndSave,
-} from "./transformations-api.js";
+import { restrictToReachable, getServerStateAndSave} from "./transformations-api.js";
 import { fetchGraph } from "./graph-server-api.js";
 
 const undoManager = new UndoManager();
@@ -19,20 +16,16 @@ function getCommands() {
     return commands;
 }
 
-function getUndoCommand() {
+function getRedoCommand() {
     const commands = getCommands();
-    const index = undoManager.getIndex() - 1;
+    const index = undoManager.getIndex() + 1;
     return commands[index] ?? null;
 }
 
-function getRedoCommand() {
+function getCurrentCommand() {
     const commands = getCommands();
     const index = undoManager.getIndex();
     return commands[index] ?? null;
-}
-
-function getCurrentPairBeforeAdd() {
-    return getRedoCommand();
 }
 
 function graphStatesEqual(a, b) {
@@ -43,8 +36,8 @@ function graphStatesEqual(a, b) {
         console.log("strA and strB are equal.");
     } else {
         console.log("strA and strB are not equal.");
-        console.log('a.isCanonical: ', a.isCanonical); 
-        console.log('b.isCanonical: ', b.isCanonical); 
+        console.log('a.isCanonical: ', a.isCanonical);
+        console.log('b.isCanonical: ', b.isCanonical);
     }
     return equal;
 }
@@ -68,7 +61,7 @@ export function initUndoRedoStacks() {
     };
     redo.url = url;
 
-    undoManager.add({ undo, redo });
+    undoManager.add({undo, redo});
 }
 
 function addCheckpoint(url) {
@@ -76,7 +69,7 @@ function addCheckpoint(url) {
         throw new Error("addCheckpoint: url must be a non-empty string");
     }
 
-    const previousCommand = getCurrentPairBeforeAdd();
+    const previousCommand = getCurrentCommand();
     if (!previousCommand?.redo?.cmd) {
         throw new Error("addCheckpoint: previous redo.cmd is missing");
     }
@@ -91,7 +84,7 @@ function addCheckpoint(url) {
     };
     redo.url = url;
 
-    undoManager.add({ undo, redo });
+    undoManager.add({undo, redo});
 }
 
 async function transformAndCheckpoint(transformation, args = [], url) {
@@ -117,10 +110,10 @@ function addTail(undoUrl, redoState) {
         throw new Error("addTail: redoState is required");
     }
 
-    console.log('AddTail undoURL: ', undoUrl, ' Current index :', undoManager.getIndex()); 
     const undo = function () {};
     undo.cmd = async () => {
-        getServerStateAndSave(undoUrl);
+        console.log('getServerStateAndSave(undoUrl) with undoUrl =', undoUrl); 
+        await getServerStateAndSave(undoUrl);
     };
     undo.url = undoUrl;
 
@@ -131,8 +124,8 @@ function addTail(undoUrl, redoState) {
     redo.url = "";
     redo.isTail = true;
 
-    undoManager.add({ undo, redo });
-    console.log('Tail added. New index :', undoManager.getIndex()); 
+    undoManager.add({undo, redo});
+    console.log('Tail added. New index :', undoManager.getIndex());
 }
 
 export async function redo() {
@@ -145,6 +138,15 @@ export async function redo() {
         throw new Error("redo: current redo.cmd is missing");
     }
 
+    const commands = undoManager.getCommands();     
+    const index = undoManager.getIndex();
+
+    console.log("redo index =", index);
+    console.log("commands[index]?.redo?.url =", commands[index]?.redo?.url);
+    console.log("commands[index + 1]?.redo?.url =", commands[index + 1]?.redo?.url);
+    console.log("commands[index - 1]?.redo?.url =", commands[index - 1]?.redo?.url);
+    
+    console.log('In redo, command.redo.url =', command.redo.url); 
     await command.redo.cmd();
     undoManager.redo();
 }
@@ -154,7 +156,7 @@ export async function undoWithAddTail() {
         return;
     }
 
-    const currentCommand = getRedoCommand();
+    const currentCommand = getCurrentCommand();
     if (!currentCommand?.undo?.cmd) {
         throw new Error("undoWithAddTail: current undo.cmd is missing");
     }
@@ -164,26 +166,30 @@ export async function undoWithAddTail() {
         if (!checkpointUrl) {
             throw new Error("undoWithAddTail: current redo.url is missing");
         }
-
+        
+        console.log ('Fetching undoTailState, a checkpointSate, with url: ', checkpointUrl); 
         const undoTailState = await fetchGraph(checkpointUrl);
         const redoTailState = getGraphState();
 
-        if (true || !redoTailState.isCanonical) {
-            console.log('undoUrl = checkpointUrl = ', checkpointUrl); 
-            console.log('No check of isCanonical, no comparison, always addTail');``
-            console.log('Before addTail(checkpointUrl, redoTailState), redoTailState.saveId = ', redoTailState.saveId)
+        if (!redoTailState.isCanonical) {
+            console.log('redoTailState.isCanonical is false');
+            console.log('undoUrl for tail (checkpointUrl) = ', checkpointUrl);
             addTail(checkpointUrl, redoTailState);
+        }
+        else {
+            console.log('redoTailState.isCanonical is true, no tail added.');
+            
         }
     }
 
-    const commandToUndo = getUndoCommand();
+    const commandToUndo = getCurrentCommand();
     if (!commandToUndo?.undo?.cmd) {
         throw new Error("undoWithAddTail: effective undo.cmd is missing");
     }
 
+    console.log('Now, we call the undo with url ', commandToUndo.undo.url); 
     await commandToUndo.undo.cmd();
     undoManager.undo();
-    console.log('After await commandToUndo.undo.cmd();, getGraphState().saveId = ',  getGraphState().saveId )
 }
 
 export { undoManager };

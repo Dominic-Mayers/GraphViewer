@@ -38,9 +38,6 @@ export function getGraphState() {
 }
 
 function setHistoryInfo (canonical = false, isCheckpoint = false) {
-    if (canonical) {
-        console.log('Consuming saveId ', saveId); 
-    }
     graphState.isCanonical = canonical; 
     graphState.saveId = canonical ? saveId++ : null;
     graphState.isCheckpoint = canonical && isCheckpoint;

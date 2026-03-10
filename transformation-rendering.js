@@ -29,7 +29,8 @@ export async function applyTransformationAndRender(
 
   // 1) Mutate state
   await transformationFn(...args);
-
+  ; 
   // 2) Render from current graph-state
   await renderState(container, null, preserveView);
+  ; 
 }
