@@ -103,6 +103,6 @@ export async function getServerStateAndSave(url) {
     graphId: payload.graphId,
     nodes: payload.nodes,
     adjacency: payload.adjacency
-  });
+  }, true, true);
   ;
 }
