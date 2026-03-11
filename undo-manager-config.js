@@ -29,28 +29,28 @@ function initUndoRedoListener(container) {
     // Undo: Ctrl/Cmd + Z
     if (key === "z" && !shift) {
       event.preventDefault();
-      ;
+      console.log('Start Ctrl-z');
       await applyTransformationAndRender(
         undoWithAddTail,
         [],
         container,
         { preserveView: false }
       );
-      ;
+      console.log('End Ctrl-z');
       return;
     }
 
     // Redo: Ctrl/Cmd + Y  OR  Ctrl/Cmd + Shift + Z
     if (key === "y" || (key === "z" && shift)) {
       event.preventDefault();
-      ;
+      console.log('Start Ctrl-y');
       await applyTransformationAndRender(
         redo,
         [],
         container,
         { preserveView: false }
       );
-      ;
+      console.log('Eng Ctrl-y');
     }
   });
 }

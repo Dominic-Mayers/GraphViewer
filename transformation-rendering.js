@@ -6,6 +6,7 @@
 // Policy remains here (e.g., preserveView).
 
 import { renderState } from "./render-state.js";
+import { getCurrentCommand, undoManager } from "./transformations-with-undo.js"; 
 
 /**
  * Execute a transformation and then render.
@@ -17,20 +18,29 @@ import { renderState } from "./render-state.js";
  * @param {boolean} [options.preserveView=false]
  */
 export async function applyTransformationAndRender(
-  transformationFn,
-  args = [],
-  container,
-  { preserveView = false } = {}
+        transformationFn,
+        args = [],
+        container,
+{ preserveView = false } = {}
 ) {
-  if (!container) throw new Error("applyTransformationAndRender: container is required");
-  if (typeof transformationFn !== "function") {
-    throw new Error("applyTransformationAndRender: transformationFn must be a function");
-  }
+    if (!container)
+        throw new Error("applyTransformationAndRender: container is required");
+    if (typeof transformationFn !== "function") {
+        throw new Error("applyTransformationAndRender: transformationFn must be a function");
+    }
 
-  // 1) Mutate state
-  await transformationFn(...args);
-  ; 
-  // 2) Render from current graph-state
-  await renderState(container, null, preserveView);
-  ; 
+    const currentCommand = getCurrentCommand();
+    console.log('Before ', transformationFn.name, '(', JSON.stringify(args), '), currentCommand.redo.url =', currentCommand.redo.url );
+    console.log('currentCommand?.redo?.isTail =', currentCommand?.redo?.isTail);
+    if (currentCommand?.redo?.isTail) {
+        await currentCommand.undo.cmd();
+        undoManager.undo();
+    }
+
+    // 1) Mutate state
+    await transformationFn(...args);
+
+    // 2) Render from current graph-state
+    await renderState(container, null, preserveView);
+
 }

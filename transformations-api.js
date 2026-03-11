@@ -96,7 +96,7 @@ export function restrictToReachable(startNodeId, isCheckpoint = false) {
  * Intended for synthetic checkpoints and other authoritative restores.
  * Mutates graph state only; rendering is handled elsewhere.
  */
-export async function getServerStateAndSave(url) {
+export async function getServerStateAndSaveCheckpoint(url) {
   const payload = await fetchGraph(url);
   ; 
   setGraphState({
