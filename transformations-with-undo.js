@@ -102,6 +102,8 @@ export async function restrictToReachableWithUndo(nodeId) {
     await transformAndCheckpoint(restrictToReachable, [nodeId, true], url);
 }
 
+restrictToReachableWithUndo.isMajor = true;
+
 function addTail(undoUrl, redoState) {
     if (!undoUrl) {
         throw new Error("addTail: undoUrl is missing");
@@ -119,7 +121,7 @@ function addTail(undoUrl, redoState) {
 
     const redo = function () {};
     redo.cmd = async () => {
-        setGraphState(redoState);
+        setGraphState(redoState, false, true);
     };
     redo.url = "";
     redo.isTail = true;
@@ -162,16 +164,20 @@ export async function undoWithAddTail() {
     }
     
     const redoTailState = getGraphState();
-    if (!redoTailState.isCanonical) {
-        console.log('redoTailState.isCanonical is false');
+    if (!redoTailState.isSync) {
+        console.log('redoTailState.isSync is false');
     }
     else {
-        console.log('redoTailState.isCanonical is true, no tail added.');        
+        console.log('redoTailState.isSync is true, no tail added.');        
     }
-    if (
-        !redoTailState.isCanonical
-    ) {
-        const checkpointUrl = currentCommand.redo?.url;
+    if ( !redoTailState.isSync ) {
+        console.log('currentCommand.redo?.isTail = ', currentCommand.redo?.isTail); 
+        if (currentCommand.redo?.isTail) {
+            console.log('Doing pure undoManager.undo()'); 
+            undoManager.undo();
+            console.log('Index after pure undo :', undoManager.getIndex()); 
+        }
+        const checkpointUrl = getCurrentCommand().redo?.url;
         if (!checkpointUrl) {
             throw new Error("undoWithAddTail: current redo.url is missing");
         }

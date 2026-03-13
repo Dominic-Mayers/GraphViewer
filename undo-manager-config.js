@@ -50,7 +50,7 @@ function initUndoRedoListener(container) {
         container,
         { preserveView: false }
       );
-      console.log('Eng Ctrl-y');
+      console.log('End Ctrl-y');
     }
   });
 }

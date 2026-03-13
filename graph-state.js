@@ -4,16 +4,14 @@
 // - applyDelta(delta): incremental mutation (supports optional edge deletions)
 
 let graphState = {
-  graphId: null,
-  saveId: null, 
+  graphId: null, 
   isCanonical : false,
-  isCheckpoint : false,
+  isTail : false,
+  isSync : false,
   nodes: {},
   adjacency: {},
   incoming: {} // derived index; owned + maintained here
 };
-
-let saveId = 0; 
 
 /**
  * Get the graphId
@@ -36,11 +34,14 @@ export function getSaveId() {
 export function getGraphState() {
   return snapshotState(graphState);
 }
-
-function setHistoryInfo (canonical = false, isCheckpoint = false) {
-    graphState.isCanonical = canonical; 
-    graphState.saveId = canonical ? saveId++ : null;
-    graphState.isCheckpoint = canonical && isCheckpoint;
+/*
+ * @param {bool} canonical - tells whether it comes from a main transformation or its cleaned version.
+ * @param {bool} tail - tells whether it comes from adding a tail.
+ */
+function setHistoryInfo (canonical = null, tail = null) {
+    if (canonical !== null) { graphState.isCanonical = canonical;} 
+    if (tail !== null) { graphState.isTail = tail;}
+    graphState.isSync = tail || canonical; 
 }
   
 /**
@@ -48,11 +49,11 @@ function setHistoryInfo (canonical = false, isCheckpoint = false) {
  * This is NOT a delta application and should not compute deltas.
  *
  * @param {Object} newState - { graphId, nodes, adjacency }
- * @param {bool} canonical - tells whether to set a saveId or nullify it.
- * @param {bool} isCheckpoint - tells whether the save is part of the history.
+ * @param {bool} canonical - tells whether it comes from a main transformation or its cleaned version.
+ * @param {bool} tail - tells whether it comes from adding a tail.
  */
-export function setGraphState(newState, canonical = false, isCheckpoint = false) {
-  setHistoryInfo(canonical, isCheckpoint);   
+export function setGraphState(newState, canonical = false, tail = false) {
+  setHistoryInfo(canonical, tail);   
   graphState.graphId = newState.graphId ?? graphState.graphId;
   graphState.nodes = newState.nodes || {};
   graphState.adjacency = newState.adjacency || {};

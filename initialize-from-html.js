@@ -23,7 +23,7 @@ export function initializeGraphFromDOM() {
         graphId: dataArray.graphId
     };
     // Store in graph-state
-    setGraphState(initialState);
+    setGraphState(initialState, true);
 
     return initialState;
 }

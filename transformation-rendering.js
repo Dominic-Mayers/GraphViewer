@@ -28,11 +28,13 @@ export async function applyTransformationAndRender(
     if (typeof transformationFn !== "function") {
         throw new Error("applyTransformationAndRender: transformationFn must be a function");
     }
-
     const currentCommand = getCurrentCommand();
     console.log('Before ', transformationFn.name, '(', JSON.stringify(args), '), currentCommand.redo.url =', currentCommand.redo.url );
     console.log('currentCommand?.redo?.isTail =', currentCommand?.redo?.isTail);
-    if (currentCommand?.redo?.isTail) {
+    console.log('transformationFn.name = ', transformationFn.name); 
+    console.log('transformationFn?.isMajor = ', transformationFn?.isMajor); 
+    if (currentCommand?.redo?.isTail && currentCommand.undo?.isSync ) {
+        console.log('Undoing before transformation when current undo command is major and redo is tail')
         await currentCommand.undo.cmd();
         undoManager.undo();
     }
