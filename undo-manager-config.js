@@ -1,7 +1,7 @@
 // assets/graph/undo-manager-config.js
 
 import { applyTransformationAndRender } from "./transformation-rendering.js";
-import { initUndoRedoStacks, undoWithAddTail, redo } from "./transformations-with-undo.js";
+import { initUndoRedoStacks, undoWithAddTail, captureTail, redo } from "./transformations-with-undo.js";
 
 /**
  * Install keyboard listeners for undo/redo.
@@ -30,9 +30,10 @@ function initUndoRedoListener(container) {
     if (key === "z" && !shift) {
       event.preventDefault();
       console.log('Start Ctrl-z');
+      const undoTailState = await captureTail();  
       await applyTransformationAndRender(
         undoWithAddTail,
-        [],
+        [undoTailState],
         container,
         { preserveView: false }
       );
