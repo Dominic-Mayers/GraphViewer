@@ -36,7 +36,7 @@ function initUndoRedoListener(container) {
 
             const cmd = undoHist({captureTail});
             if (typeof cmd !== "function") {
-                console.log('typeof cmd in undo listener is not a function'); 
+                return; 
             }
             await applyTransformationAndRender(
                     cmd,
@@ -54,7 +54,7 @@ function initUndoRedoListener(container) {
             console.log('Start Ctrl-y');
             const cmd = redoHist();
             if (typeof cmd !== "function") {
-                console.log('typeof cmd in redo listener is not a function'); 
+                return; 
             }
             
             await applyTransformationAndRender(
