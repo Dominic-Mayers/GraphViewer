@@ -11,6 +11,7 @@
 import { getGraphState, getGraphId, applyDelta, setGraphState } from "./graph-state.js";
 import { applyDeltaWithFiltering } from "./transformation-helper.js";
 import { fetchGraph, fetchDelta } from "./graph-server-api.js";
+import { unSyncHist } from "./undo-manager-jit-tail.js"; 
 
 /**
  * Server-backed: expand a group node.
@@ -28,6 +29,7 @@ export async function expandGroup(groupId) {
   };
 
   applyDeltaWithFiltering(delta);
+  unSyncHist();
 }
 
 /**
@@ -46,6 +48,7 @@ export async function collapseGroup(groupId) {
   };
 
   applyDeltaWithFiltering(delta);
+  unSyncHist(); 
 }
 
 /**

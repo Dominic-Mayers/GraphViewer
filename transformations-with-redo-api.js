@@ -114,7 +114,7 @@ export function restrictToReachable(startNodeId) {
  *
  * This is the pattern to use for server-cleaned checkpoints.
  */
-export async function addCheckpoint(url) {
+export async function executeHist(url) {
   if (!undoManager) throw new Error("Undo/redo stacks not initialized");
 
   const previousCommand = undoManager.getCommands().at(-1);
@@ -134,11 +134,11 @@ export async function addCheckpoint(url) {
 
 /**
  * Convenience wrapper for a future server-cleaned restrictToReachable route.
- * Adjust/remove if you prefer to call addCheckpoint(url) directly.
+ * Adjust/remove if you prefer to call executeHist(url) directly.
  */
 export async function restrictToReachableCheckpoint(graphId, nodeId) {
   const url = `/graph/${graphId}/${nodeId}`;
-  await addCheckpoint(url);
+  await executeHist(url);
 }
 
 /**

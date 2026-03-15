@@ -1,7 +1,8 @@
 // assets/graph/undo-manager-config.js
 
 import { applyTransformationAndRender } from "./transformation-rendering.js";
-import { initUndoRedoStacks, undoWithAddTail, captureTail, redo } from "./transformations-with-undo.js";
+import { initUndoRedoStacks, undoHist,  redoHist } from "./undo-manager-jit-tail.js";
+import { captureTailFactory } from "./transformations-with-undo.js";
 
 /**
  * Install keyboard listeners for undo/redo.
@@ -15,45 +16,56 @@ import { initUndoRedoStacks, undoWithAddTail, captureTail, redo } from "./transf
  * @param {HTMLElement} container
  */
 function initUndoRedoListener(container) {
-  if (!container) {
-    throw new Error("initUndoRedoListener: container is required");
-  }
-
-  window.addEventListener("keydown", async (event) => {
-    const key = event.key.toLowerCase();
-    const ctrlOrMeta = event.ctrlKey || event.metaKey;
-    const shift = event.shiftKey;
-
-    if (!ctrlOrMeta) return;
-
-    // Undo: Ctrl/Cmd + Z
-    if (key === "z" && !shift) {
-      event.preventDefault();
-      console.log('Start Ctrl-z');
-      const undoTailState = await captureTail();  
-      await applyTransformationAndRender(
-        undoWithAddTail,
-        [undoTailState],
-        container,
-        { preserveView: false }
-      );
-      console.log('End Ctrl-z');
-      return;
+    if (!container) {
+        throw new Error("initUndoRedoListener: container is required");
     }
 
-    // Redo: Ctrl/Cmd + Y  OR  Ctrl/Cmd + Shift + Z
-    if (key === "y" || (key === "z" && shift)) {
-      event.preventDefault();
-      console.log('Start Ctrl-y');
-      await applyTransformationAndRender(
-        redo,
-        [],
-        container,
-        { preserveView: false }
-      );
-      console.log('End Ctrl-y');
-    }
-  });
+    window.addEventListener("keydown", async (event) => {
+        const key = event.key.toLowerCase();
+        const ctrlOrMeta = event.ctrlKey || event.metaKey;
+        const shift = event.shiftKey;
+
+        if (!ctrlOrMeta)
+            return;
+
+        // Undo: Ctrl/Cmd + Z
+        if (key === "z" && !shift) {
+            event.preventDefault();
+            console.log('Start Ctrl-z');
+            const captureTail = await captureTailFactory();
+
+            const cmd = undoHist({captureTail});
+            if (typeof cmd !== "function") {
+                console.log('typeof cmd in undo listener is not a function'); 
+            }
+            await applyTransformationAndRender(
+                    cmd,
+                    [{captureTail}],
+                    container,
+                    {preserveView: false}
+            );
+            console.log('End Ctrl-z');
+            return;
+        }
+
+        // Redo: Ctrl/Cmd + Y  OR  Ctrl/Cmd + Shift + Z
+        if (key === "y" || (key === "z" && shift)) {
+            event.preventDefault();
+            console.log('Start Ctrl-y');
+            const cmd = redoHist();
+            if (typeof cmd !== "function") {
+                console.log('typeof cmd in redo listener is not a function'); 
+            }
+            
+            await applyTransformationAndRender(
+                    cmd,
+                    [],
+                    container,
+                    {preserveView: false}
+            );
+            console.log('End Ctrl-y');
+        }
+    });
 }
 
 /**
@@ -64,10 +76,10 @@ function initUndoRedoListener(container) {
  * @param {HTMLElement} container
  */
 export function initUndoManager(container) {
-  if (!container) {
-    throw new Error("initUndoManager: container is required");
-  }
+    if (!container) {
+        throw new Error("initUndoManager: container is required");
+    }
 
-  initUndoRedoStacks();
-  initUndoRedoListener(container);
+    initUndoRedoStacks();
+    initUndoRedoListener(container);
 }

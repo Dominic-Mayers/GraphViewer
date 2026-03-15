@@ -6,7 +6,7 @@
 // Policy remains here (e.g., preserveView).
 
 import { renderState } from "./render-state.js";
-import { getCurrentCommand, undoManager } from "./transformations-with-undo.js"; 
+import { getCurrentCommand, undoManager } from "./undo-manager-jit-tail.js"; 
 
 /**
  * Execute a transformation and then render.
@@ -26,7 +26,7 @@ export async function applyTransformationAndRender(
     if (!container)
         throw new Error("applyTransformationAndRender: container is required");
     if (typeof transformationFn !== "function") {
-        throw new Error("applyTransformationAndRender: transformationFn must be a function");
+        throw new Error("applyTransformationAndRender: transformationFn must be a function. It is ", JSON.stringify(transformationFn));
     }
     const currentCommand = getCurrentCommand();
     console.log('Before ', transformationFn.name, '(', JSON.stringify(args), '), currentCommand.redo.url =', currentCommand.redo.url );
