@@ -1,7 +1,7 @@
 // assets/graph/undo-manager-config.js
 
 import { applyTransformationAndRender } from "./transformation-rendering.js";
-import { initUndoRedoStacks, undoHist,  redoHist } from "./undo-manager-jit-tail.js";
+import { initHist, undoHist,  redoHist } from "./undo-manager-jit-tail.js";
 import { captureTailFactory } from "./transformations-with-undo.js";
 
 /**
@@ -80,6 +80,6 @@ export function initUndoManager(container) {
         throw new Error("initUndoManager: container is required");
     }
 
-    initUndoRedoStacks();
+    initHist();
     initUndoRedoListener(container);
 }

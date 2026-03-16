@@ -6,7 +6,6 @@
 // Policy remains here (e.g., preserveView).
 
 import { renderState } from "./render-state.js";
-import { getCurrentCommand, undoManager } from "./undo-manager-jit-tail.js"; 
 
 /**
  * Execute a transformation and then render.
@@ -18,25 +17,20 @@ import { getCurrentCommand, undoManager } from "./undo-manager-jit-tail.js";
  * @param {boolean} [options.preserveView=false]
  */
 export async function applyTransformationAndRender(
-        transformationFn,
-        args = [],
-        container,
-{ preserveView = false } = {}
+    transformationFn,
+    args = [],
+    container,
+    { preserveView = false } = {}
 ) {
-    if (!container)
+    if (!container) {
         throw new Error("applyTransformationAndRender: container is required");
-    if (typeof transformationFn !== "function") {
-        throw new Error("applyTransformationAndRender: transformationFn must be a function. It is ", JSON.stringify(transformationFn));
     }
-    const currentCommand = getCurrentCommand();
-    console.log('Before ', transformationFn.name, '(', JSON.stringify(args), '), currentCommand.redo.url =', currentCommand.redo.url );
-    console.log('currentCommand?.redo?.isTail =', currentCommand?.redo?.isTail);
-    console.log('transformationFn.name = ', transformationFn.name); 
-    console.log('transformationFn?.isMajor = ', transformationFn?.isMajor); 
-    if (currentCommand?.redo?.isTail && currentCommand.undo?.isSync ) {
-        console.log('Undoing before transformation when current undo command is major and redo is tail')
-        await currentCommand.undo.cmd();
-        undoManager.undo();
+
+    if (typeof transformationFn !== "function") {
+        throw new Error(
+            "applyTransformationAndRender: transformationFn must be a function. It is " +
+            JSON.stringify(transformationFn)
+        );
     }
 
     // 1) Mutate state
@@ -44,5 +38,4 @@ export async function applyTransformationAndRender(
 
     // 2) Render from current graph-state
     await renderState(container, null, preserveView);
-
 }

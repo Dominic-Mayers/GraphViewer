@@ -17,10 +17,10 @@ export function unSyncHist() {
     sync = false;
 }
 
-export function initUndoRedoStacks() {
+export function initHist() {
     const graphId = getGraphId();
     if (!graphId) {
-        throw new Error("initUndoRedoStacks: graphId is missing");
+        throw new Error("initHist: graphId is missing");
     }
 
     const url = `/graph/${graphId}`;
@@ -40,28 +40,41 @@ export function initUndoRedoStacks() {
     sync = true;
 }
 
-export function executeHist(url) {
-    if (!url || typeof url !== "string") {
-        throw new Error("executeHist: url must be a non-empty string");
+export function executeHist(undo, redo) {
+    if (!undo || typeof undo !== "function") {
+        throw new Error("executeHist: undo must be a function");
+    }
+    if (!redo || typeof redo !== "function") {
+        throw new Error("executeHist: redo must be a function");
+    }
+    if (typeof undo.cmd !== "function") {
+        throw new Error("executeHist: undo.cmd is missing");
+    }
+    if (typeof redo.cmd !== "function") {
+        throw new Error("executeHist: redo.cmd is missing");
     }
 
-    const previousCommand = getCurrentCommand();
-    if (!previousCommand?.redo?.cmd) {
-        throw new Error("executeHist: previous redo.cmd is missing");
-    }
-
-    const undo = function () {};
-    undo.cmd = previousCommand.redo.cmd;
-    undo.url = previousCommand.redo.url;
-
-    const redo = function () {};
-    redo.cmd = async () => {
-        await getServerStateAndSaveCheckpoint(url);
-    };
-    redo.url = url;
-
-    undoManager.add({undo, redo});
+    addHist(undo, redo);
     sync = true;
+}
+
+export function prepareExecuteHist() {
+    const currentCommand = getCurrentCommand();
+    const mustCleanTail = currentCommand?.redo?.isTail && sync;
+
+    if (!mustCleanTail) {
+        return null;
+    }
+
+    if (!currentCommand?.undo?.cmd) {
+        throw new Error("prepareExecuteHist: current undo.cmd is missing for tail cleanup");
+    }
+
+    return async function prepareMajorState() {
+        await currentCommand.undo.cmd();
+        undoManager.undo();
+        sync = true;
+    };
 }
 
 export function redoHist() {
@@ -93,7 +106,7 @@ export function undoHist( { captureTail } = {}) {
         if (!currentCommand?.undo?.cmd) {
             throw new Error("undoHist: current undo.cmd is missing");
         }
-                
+
         if (currentCommand.redo?.isTail) {
             undoManager.undo();
         }
@@ -155,25 +168,29 @@ function getRedoCommand() {
 }
 
 function addTail(undo, redo) {
+    redo.isTail = true;
+    addHist(undo, redo);
+}
+
+function addHist(undo, redo) {
     if (!undo || typeof undo !== "function") {
-        throw new Error("addTail: undo must be a function");
+        throw new Error("addHist: undo must be a function");
     }
     if (!redo || typeof redo !== "function") {
-        throw new Error("addTail: redo must be a function");
+        throw new Error("addHist: redo must be a function");
     }
     if (typeof undo.cmd !== "function") {
-        throw new Error("addTail: undo.cmd is missing");
+        throw new Error("addHist: undo.cmd is missing");
     }
     if (typeof redo.cmd !== "function") {
-        throw new Error("addTail: redo.cmd is missing");
+        throw new Error("addHist: redo.cmd is missing");
     }
 
-    redo.isTail = true;
-    undoManager.add({undo, redo});
+    undoManager.add({ undo, redo });
 }
 
 function isAtInitialCheckpoint() {
     return undoManager.getIndex() === 0;
 }
 
-export { undoManager };
+export {undoManager}; 

@@ -1,11 +1,31 @@
 import { getGraphId, getGraphState, setGraphState } from "./graph-state.js";
 import { restrictToReachable, getServerStateAndSaveCheckpoint} from "./transformations-api.js";
 import { fetchGraph } from "./graph-server-api.js";
-import { executeHist, getCurrentCommand, getPreviousCommand } from "./undo-manager-jit-tail.js"; 
+import { prepareExecuteHist, executeHist, getCurrentCommand, getPreviousCommand } from "./undo-manager-jit-tail.js"; 
 
 async function transformAndCheckpoint(transformation, args = [], url) {
+    const prepareCommand = prepareExecuteHist();
+    if (prepareCommand) {
+        await prepareCommand();
+    }
+
+    const previousCommand = getCurrentCommand();
+    if (!previousCommand?.redo?.cmd) {
+        throw new Error("transformAndCheckpoint: previous redo.cmd is missing");
+    }
+
+    const undo = function () {};
+    undo.cmd = previousCommand.redo.cmd;
+    undo.url = previousCommand.redo.url;
+
+    const redo = function () {};
+    redo.cmd = async () => {
+        await getServerStateAndSaveCheckpoint(url);
+    };
+    redo.url = url;
+
     await transformation(...args);
-    executeHist(url);
+    executeHist(undo, redo);
 }
 
 export async function restrictToReachableWithUndo(nodeId) {
