@@ -5,9 +5,6 @@
 
 let graphState = {
   graphId: null, 
-  isCanonical : false,
-  isTail : false,
-  isSync : false,
   nodes: {},
   adjacency: {},
   incoming: {} // derived index; owned + maintained here
@@ -21,27 +18,11 @@ export function getGraphId() {
 }
 
 /**
- * Get the saveId
- */
-export function getSaveId() {
-  return graphState.saveId;
-}
-
-/**
  * Read-only snapshot of current graph state.
  * This avoids leaking internal references to state-owned objects.
  */
 export function getGraphState() {
   return snapshotState(graphState);
-}
-/*
- * @param {bool} canonical - tells whether it comes from a main transformation or its cleaned version.
- * @param {bool} tail - tells whether it comes from adding a tail.
- */
-function setHistoryInfo (canonical = null, tail = null) {
-    if (canonical !== null) { graphState.isCanonical = canonical;} 
-    if (tail !== null) { graphState.isTail = tail;}
-    graphState.isSync = tail || canonical; 
 }
   
 /**
@@ -53,7 +34,6 @@ function setHistoryInfo (canonical = null, tail = null) {
  * @param {bool} tail - tells whether it comes from adding a tail.
  */
 export function setGraphState(newState, canonical = false, tail = false) {
-  setHistoryInfo(canonical, tail);   
   graphState.graphId = newState.graphId ?? graphState.graphId;
   graphState.nodes = newState.nodes || {};
   graphState.adjacency = newState.adjacency || {};
@@ -69,7 +49,6 @@ export function applyDelta(
   options = { incrementalIncoming: true }, canonical = false, isCheckpoint = false
 ) {
   const incremental = options.incrementalIncoming ?? false;
-  setHistoryInfo(canonical, isCheckpoint);   
 
   // ---- 0. Delete edges explicitly requested ----
   // Supports:

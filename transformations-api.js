@@ -11,13 +11,14 @@
 import { getGraphState, getGraphId, applyDelta, setGraphState } from "./graph-state.js";
 import { applyDeltaWithFiltering } from "./transformation-helper.js";
 import { fetchGraph, fetchDelta } from "./graph-server-api.js";
-import { unSyncHist } from "./undo-manager-jit-tail.js"; 
+import { unSyncHist, logStateHist} from "./undo-manager-jit-tail.js"; 
 
 /**
  * Server-backed: expand a group node.
  * Mutates graph state only; rendering is handled elsewhere.
  */
 export async function expandGroup(groupId) {
+  console.log('Minor with node', groupId );   
   const graphId = getGraphId();
 
   const payload = await fetchDelta(`/expandGroup/${graphId}/${groupId}`);
@@ -30,6 +31,7 @@ export async function expandGroup(groupId) {
 
   applyDeltaWithFiltering(delta);
   unSyncHist();
+  logStateHist('expandGroup:'); 
 }
 
 /**
@@ -37,6 +39,7 @@ export async function expandGroup(groupId) {
  * Mutates graph state only; rendering is handled elsewhere.
  */
 export async function collapseGroup(groupId) {
+  console.log('Minor with node', groupId );   
   const graphId = getGraphId();
 
   const payload = await fetchDelta(`/collapseGroup/${graphId}/${groupId}`);
@@ -49,6 +52,7 @@ export async function collapseGroup(groupId) {
 
   applyDeltaWithFiltering(delta);
   unSyncHist(); 
+  logStateHist('collapseGroup:'); 
 }
 
 /**

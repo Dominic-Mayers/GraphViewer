@@ -1,15 +1,14 @@
 import { getGraphId, getGraphState, setGraphState } from "./graph-state.js";
 import { restrictToReachable, getServerStateAndSaveCheckpoint} from "./transformations-api.js";
 import { fetchGraph } from "./graph-server-api.js";
-import { prepareExecuteHist, executeHist, getCurrentCommand, getPreviousCommand } from "./undo-manager-jit-tail.js"; 
+import { executeHist, getCurrentCommand, getPreviousCommand, atTail } from "./undo-manager-jit-tail.js";
 
 async function transformAndCheckpoint(transformation, args = [], url) {
-    const prepareCommand = prepareExecuteHist();
-    if (prepareCommand) {
-        await prepareCommand();
-    }
 
-    const previousCommand = getCurrentCommand();
+    const previousCommand = atTail()
+            ? getPreviousCommand()
+            : getCurrentCommand();
+
     if (!previousCommand?.redo?.cmd) {
         throw new Error("transformAndCheckpoint: previous redo.cmd is missing");
     }
@@ -40,9 +39,9 @@ export async function restrictToReachableWithUndo(nodeId) {
 
 export async function captureTailFactory() {
     const currentCommand = getCurrentCommand();
-    const checkpointUrl = currentCommand?.redo?.isTail
-        ? getPreviousCommand()?.redo?.url
-        : currentCommand?.redo?.url;
+    const checkpointUrl = atTail()
+            ? getPreviousCommand()?.redo?.url
+            : currentCommand?.redo?.url;
 
     if (!checkpointUrl) {
         throw new Error("captureTailFactory: checkpoint redo.url is missing");
@@ -71,6 +70,6 @@ export async function captureTailFactory() {
             setGraphState(redoTailState, false, true);
         };
 
-        return { undo, redo };
+        return {undo, redo};
     };
 }

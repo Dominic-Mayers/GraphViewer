@@ -8,6 +8,15 @@ import { fetchGraph } from "./graph-server-api.js";
 const undoManager = new UndoManager();
 
 let sync = true;
+let hasTail = false;
+
+export function atTail() {
+    return hasTail && undoManager.getIndex() === undoManager.getCommands().length - 1;
+}
+
+export function logStateHist(why) {
+    console.log(why, 'index=', undoManager.getIndex(), 'last=', undoManager.getCommands().length - 1, 'hasTail=', hasTail, 'sync=', sync);
+}
 
 export function isSyncHist() {
     return sync;
@@ -38,6 +47,7 @@ export function initHist() {
 
     undoManager.add({undo, redo});
     sync = true;
+    hasTail = false;
 }
 
 export function executeHist(undo, redo) {
@@ -56,25 +66,7 @@ export function executeHist(undo, redo) {
 
     addHist(undo, redo);
     sync = true;
-}
-
-export function prepareExecuteHist() {
-    const currentCommand = getCurrentCommand();
-    const mustCleanTail = currentCommand?.redo?.isTail && sync;
-
-    if (!mustCleanTail) {
-        return null;
-    }
-
-    if (!currentCommand?.undo?.cmd) {
-        throw new Error("prepareExecuteHist: current undo.cmd is missing for tail cleanup");
-    }
-
-    return async function prepareMajorState() {
-        await currentCommand.undo.cmd();
-        undoManager.undo();
-        sync = true;
-    };
+    logStateHist('ExecuteHist:');
 }
 
 export function redoHist() {
@@ -90,6 +82,7 @@ export function redoHist() {
 
     undoManager.redo();
     sync = true;
+    logStateHist('redoHist: ');
     return command.redo.cmd;
 }
 
@@ -107,10 +100,6 @@ export function undoHist( { captureTail } = {}) {
             throw new Error("undoHist: current undo.cmd is missing");
         }
 
-        if (currentCommand.redo?.isTail) {
-            undoManager.undo();
-        }
-
         if (typeof captureTail !== "function") {
             throw new Error("undoHist: captureTail is required when state is not synchronized");
         }
@@ -126,6 +115,7 @@ export function undoHist( { captureTail } = {}) {
 
     undoManager.undo();
     sync = true;
+    logStateHist('undoHist: ');
     return commandToUndo.undo.cmd;
 }
 
@@ -168,8 +158,8 @@ function getRedoCommand() {
 }
 
 function addTail(undo, redo) {
-    redo.isTail = true;
     addHist(undo, redo);
+    hasTail = true;
 }
 
 function addHist(undo, redo) {
@@ -186,7 +176,12 @@ function addHist(undo, redo) {
         throw new Error("addHist: redo.cmd is missing");
     }
 
-    undoManager.add({ undo, redo });
+    if (hasTail && undoManager.getIndex() === undoManager.getCommands().length - 1) {
+        undoManager.undo();
+        hasTail = false;
+    }
+
+    undoManager.add({undo, redo});
 }
 
 function isAtInitialCheckpoint() {
