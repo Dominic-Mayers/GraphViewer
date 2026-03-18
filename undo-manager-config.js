@@ -2,7 +2,7 @@
 
 import { applyTransformationAndRender } from "./transformation-rendering.js";
 import { initHist, undoHist,  redoHist } from "./undo-manager-jit-tail.js";
-import { captureTailFactory } from "./transformations-with-undo.js";
+import { initTailFactory } from "./transformations-with-undo.js";
 
 /**
  * Install keyboard listeners for undo/redo.
@@ -32,15 +32,15 @@ function initUndoRedoListener(container) {
         if (key === "z" && !shift) {
             event.preventDefault();
             console.log('Start Ctrl-z');
-            const captureTail = await captureTailFactory();
+            const initTail = await initTailFactory();
 
-            const cmd = undoHist({captureTail});
+            const cmd = undoHist({initTail});
             if (typeof cmd !== "function") {
                 return; 
             }
             await applyTransformationAndRender(
                     cmd,
-                    [{captureTail}],
+                    [{initTail}],
                     container,
                     {preserveView: false}
             );

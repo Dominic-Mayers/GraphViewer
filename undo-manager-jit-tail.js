@@ -51,22 +51,8 @@ export function initHist() {
 }
 
 export function executeHist(undo, redo) {
-    if (!undo || typeof undo !== "function") {
-        throw new Error("executeHist: undo must be a function");
-    }
-    if (!redo || typeof redo !== "function") {
-        throw new Error("executeHist: redo must be a function");
-    }
-    if (typeof undo.cmd !== "function") {
-        throw new Error("executeHist: undo.cmd is missing");
-    }
-    if (typeof redo.cmd !== "function") {
-        throw new Error("executeHist: redo.cmd is missing");
-    }
-
-    addHist(undo, redo);
-    sync = true;
-    logStateHist('ExecuteHist:');
+    addCheckpoint(undo, redo, false);
+    logStateHist("ExecuteHist:");
 }
 
 export function redoHist() {
@@ -86,7 +72,7 @@ export function redoHist() {
     return command.redo.cmd;
 }
 
-export function undoHist( { captureTail } = {}) {
+export function undoHist( { initTail } = {}) {
 
     if (!canUndoHist()) {
         console.log("undoHist: no undo available");
@@ -100,12 +86,12 @@ export function undoHist( { captureTail } = {}) {
             throw new Error("undoHist: current undo.cmd is missing");
         }
 
-        if (typeof captureTail !== "function") {
-            throw new Error("undoHist: captureTail is required when state is not synchronized");
+        if (typeof initTail !== "function") {
+            throw new Error("undoHist: initTail is required when state is not synchronized");
         }
 
-        const {undo, redo} = captureTail();
-        addTail(undo, redo);
+        const {undo, redo} = initTail();
+        addCheckpoint(undo, redo, true); 
     }
 
     const commandToUndo = getCurrentCommand();
@@ -157,23 +143,19 @@ function getRedoCommand() {
     return commands[index + 1] ?? null;
 }
 
-function addTail(undo, redo) {
-    addHist(undo, redo);
-    hasTail = true;
-}
 
-function addHist(undo, redo) {
+function addCheckpoint(undo, redo, isTail) {
     if (!undo || typeof undo !== "function") {
-        throw new Error("addHist: undo must be a function");
+        throw new Error("addCheckpoint: undo must be a function");
     }
     if (!redo || typeof redo !== "function") {
-        throw new Error("addHist: redo must be a function");
+        throw new Error("addCheckpoint: redo must be a function");
     }
     if (typeof undo.cmd !== "function") {
-        throw new Error("addHist: undo.cmd is missing");
+        throw new Error("addCheckpoint: undo.cmd is missing");
     }
     if (typeof redo.cmd !== "function") {
-        throw new Error("addHist: redo.cmd is missing");
+        throw new Error("addCheckpoint: redo.cmd is missing");
     }
 
     if (hasTail && undoManager.getIndex() === undoManager.getCommands().length - 1) {
@@ -182,6 +164,8 @@ function addHist(undo, redo) {
     }
 
     undoManager.add({undo, redo});
+    hasTail = isTail; 
+    sync = true; 
 }
 
 function isAtInitialCheckpoint() {

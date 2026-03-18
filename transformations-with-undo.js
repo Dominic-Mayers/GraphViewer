@@ -37,14 +37,14 @@ export async function restrictToReachableWithUndo(nodeId) {
     await transformAndCheckpoint(restrictToReachable, [nodeId, true], url);
 }
 
-export async function captureTailFactory() {
+export async function initTailFactory() {
     const currentCommand = getCurrentCommand();
     const checkpointUrl = atTail()
             ? getPreviousCommand()?.redo?.url
             : currentCommand?.redo?.url;
 
     if (!checkpointUrl) {
-        throw new Error("captureTailFactory: checkpoint redo.url is missing");
+        throw new Error("initTailFactory: checkpoint redo.url is missing");
     }
 
     const payload = await fetchGraph(checkpointUrl);
@@ -54,7 +54,7 @@ export async function captureTailFactory() {
         adjacency: payload.adjacency
     };
 
-    return function captureTail() {
+    return function initTail() {
         const redoTailState = getGraphState();
 
         const undo = function () {};
