@@ -15,13 +15,13 @@ async function transformAndCheckpoint(transformation, args = [], url) {
 
     const undo = function () {};
     undo.cmd = previousCommand.redo.cmd;
-    undo.url = previousCommand.redo.url;
+    undo.cmd.url = previousCommand.redo.cmd.url;
 
     const redo = function () {};
     redo.cmd = async () => {
         await getServerStateAndSaveCheckpoint(url);
     };
-    redo.url = url;
+    redo.cmd.url = url;
 
     await transformation(...args);
     executeHist(undo, redo);
@@ -40,11 +40,11 @@ export async function restrictToReachableWithUndo(nodeId) {
 export async function initTailFactory() {
     const currentCommand = getCurrentCommand();
     const checkpointUrl = atTail()
-            ? getPreviousCommand()?.redo?.url
-            : currentCommand?.redo?.url;
+            ? getPreviousCommand()?.redo?.cmd?.url
+            : currentCommand?.redo?.cmd?.url;
 
     if (!checkpointUrl) {
-        throw new Error("initTailFactory: checkpoint redo.url is missing");
+        throw new Error("initTailFactory: checkpoint redo.cmd.url is missing");
     }
 
     const payload = await fetchGraph(checkpointUrl);
@@ -58,17 +58,16 @@ export async function initTailFactory() {
         const redoTailState = getGraphState();
 
         const undo = function () {};
-        undo.url = checkpointUrl;
         undo.cmd = async function () {
             setGraphState(undoTailState, false, true);
         };
+        undo.cmd.url = checkpointUrl;
 
         const redo = function () {};
-        redo.url = "";
-        redo.isTail = true;
         redo.cmd = async function () {
             setGraphState(redoTailState, false, true);
         };
+        redo.cmd.url = "";
 
         return {undo, redo};
     };

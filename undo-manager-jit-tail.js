@@ -50,7 +50,7 @@ export function initHist() {
     redo.cmd = async () => {
         await getServerStateAndSaveCheckpoint(url);
     };
-    redo.url = url;
+    redo.cmd.url = url;
 
     undoManager.add({ undo, redo });
 
