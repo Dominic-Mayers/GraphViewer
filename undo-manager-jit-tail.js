@@ -32,6 +32,13 @@ export function initHist() {
         throw new Error("initHist: graphId is missing");
     }
 
+    undoManager.clear();
+
+    const commands = undoManager.getCommands?.();
+    if (!Array.isArray(commands) || commands.length !== 0) {
+        throw new Error("initHist: undoManager.clear() failed to reset history");
+    }
+
     const url = `/graph/${graphId}`;
 
     const undo = function () {};
@@ -45,7 +52,8 @@ export function initHist() {
     };
     redo.url = url;
 
-    undoManager.add({undo, redo});
+    undoManager.add({ undo, redo });
+
     sync = true;
     hasTail = false;
 }
@@ -72,28 +80,39 @@ export function redoHist() {
     return command.redo.cmd;
 }
 
-export function undoHist( { initTail } = {}) {
-
+export function undoHist({ initTail } = {}) {
     if (!canUndoHist()) {
         console.log("undoHist: no undo available");
         return null;
     }
 
+    // If the visible state is dirty, first capture it as a JIT tail.
     if (!sync) {
-
-        const currentCommand = getCurrentCommand();
-        if (!currentCommand?.undo?.cmd) {
-            throw new Error("undoHist: current undo.cmd is missing");
-        }
-
         if (typeof initTail !== "function") {
             throw new Error("undoHist: initTail is required when state is not synchronized");
         }
 
-        const {undo, redo} = initTail();
-        addCheckpoint(undo, redo, true); 
+        const tail = initTail();
+        const { undo, redo } = tail ?? {};
+
+        if (typeof undo !== "function") {
+            throw new Error("undoHist: initTail() must return an undo function");
+        }
+        if (typeof redo !== "function") {
+            throw new Error("undoHist: initTail() must return a redo function");
+        }
+        if (typeof undo.cmd !== "function") {
+            throw new Error("undoHist: tail undo.cmd is missing");
+        }
+        if (typeof redo.cmd !== "function") {
+            throw new Error("undoHist: tail redo.cmd is missing");
+        }
+
+        addCheckpoint(undo, redo, true);
     }
 
+    // After the optional tail insertion, the current entry is exactly the one
+    // that ordinary undo must undo.
     const commandToUndo = getCurrentCommand();
     if (!commandToUndo?.undo?.cmd) {
         throw new Error("undoHist: effective undo.cmd is missing");
@@ -101,7 +120,8 @@ export function undoHist( { initTail } = {}) {
 
     undoManager.undo();
     sync = true;
-    logStateHist('undoHist: ');
+    logStateHist("undoHist:");
+
     return commandToUndo.undo.cmd;
 }
 
@@ -114,7 +134,7 @@ export function canUndoHist() {
 }
 
 export function canRedoHist() {
-    return undoManager.hasRedo();
+    return sync && undoManager.hasRedo();
 }
 
 export function getCurrentCommand() {
