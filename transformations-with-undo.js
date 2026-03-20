@@ -1,21 +1,19 @@
 import { getGraphId, getGraphState, setGraphState } from "./graph-state.js";
 import { restrictToReachable, getServerStateAndSaveCheckpoint} from "./transformations-api.js";
 import { fetchGraph } from "./graph-server-api.js";
-import { executeHist, getCurrentCommand, getPreviousCommand, atTail } from "./undo-manager-jit-tail.js";
+import { executeHist, getIncomingForwardCommand, atTail } from "./undo-manager-jit-tail.js";
 
 async function transformAndCheckpoint(transformation, args = [], url) {
 
-    const previousCommand = atTail()
-            ? getPreviousCommand()
-            : getCurrentCommand();
+    const undoCmd = getIncomingForwardCommand(); // because in our case IncomingForward (redo of current) = IncomingBackward (undo of next).
 
-    if (!previousCommand?.redo?.cmd) {
-        throw new Error("transformAndCheckpoint: previous redo.cmd is missing");
+    if (!undoCmd) {
+        throw new Error("transformAndCheckpoint: incoming-forward cmd is missing");
     }
 
     const undo = function () {};
-    undo.cmd = previousCommand.redo.cmd;
-    undo.cmd.url = previousCommand.redo.cmd.url;
+    undo.cmd = undoCmd;
+    undo.cmd.url = undoCmd.url;
 
     const redo = function () {};
     redo.cmd = async () => {
@@ -38,13 +36,11 @@ export async function restrictToReachableWithUndo(nodeId) {
 }
 
 export async function initTailFactory() {
-    const currentCommand = getCurrentCommand();
-    const checkpointUrl = atTail()
-            ? getPreviousCommand()?.redo?.cmd?.url
-            : currentCommand?.redo?.cmd?.url;
+    const checkpointRedoCmd = getIncomingForwardCommand();
 
+    const checkpointUrl = checkpointRedoCmd?.url;
     if (!checkpointUrl) {
-        throw new Error("initTailFactory: checkpoint redo.cmd.url is missing");
+        throw new Error("initTailFactory: incoming-forward cmd.url is missing");
     }
 
     const payload = await fetchGraph(checkpointUrl);
@@ -69,6 +65,6 @@ export async function initTailFactory() {
         };
         redo.cmd.url = "";
 
-        return {undo, redo};
+        return { undo, redo };
     };
 }

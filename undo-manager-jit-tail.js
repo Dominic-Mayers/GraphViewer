@@ -9,9 +9,17 @@ const undoManager = new UndoManager();
 
 let sync = true;
 let hasTail = false;
+let tailMode = "ephemeral";
 
 export function atTail() {
+    if (tailMode !== "ephemeral") {
+        return false;
+    }
     return hasTail && undoManager.getIndex() === undoManager.getCommands().length - 1;
+}
+
+export function getTailMode() {
+    return tailMode;
 }
 
 export function logStateHist(why) {
@@ -26,20 +34,24 @@ export function unSyncHist() {
     sync = false;
 }
 
-export function initHist() {
-    const graphId = getGraphId();
-    if (!graphId) {
-        throw new Error("initHist: graphId is missing");
+export function initHist(initialRedoCmd = async () => {}, tailModeArg = "ephemeral") {
+
+    if (tailModeArg !== "ephemeral" && tailModeArg !== "persistent") {
+        throw new Error("initHistGeneric: tailMode must be 'ephemeral' or 'persistent'");
+    }
+
+    tailMode = tailModeArg;
+
+    if (typeof initialRedoCmd !== "function") {
+        throw new Error("initHistGeneric: initialRedoCmd must be a function");
     }
 
     undoManager.clear();
 
     const commands = undoManager.getCommands?.();
     if (!Array.isArray(commands) || commands.length !== 0) {
-        throw new Error("initHist: undoManager.clear() failed to reset history");
+        throw new Error("initHistGeneric: undoManager.clear() failed to reset history");
     }
-
-    const url = `/graph/${graphId}`;
 
     const undo = function () {};
     undo.cmd = async () => {
@@ -47,10 +59,7 @@ export function initHist() {
     };
 
     const redo = function () {};
-    redo.cmd = async () => {
-        await getServerStateAndSaveCheckpoint(url);
-    };
-    redo.cmd.url = url;
+    redo.cmd = initialRedoCmd;
 
     undoManager.add({ undo, redo });
 
@@ -137,6 +146,32 @@ export function canRedoHist() {
     return sync && undoManager.hasRedo();
 }
 
+function getSemanticIndex() {
+    const index = undoManager.getIndex();
+    return atTail() ? index - 1 : index;
+}
+
+function getCommandAt(index) {
+    const commands = getCommands();
+    return commands[index] ?? null;
+}
+
+export function getIncomingForwardCommand() {
+    return getCommandAt(getSemanticIndex())?.redo?.cmd ?? null;
+}
+
+export function getOutgoingBackwardCommand() {
+    return getCommandAt(getSemanticIndex())?.undo?.cmd ?? null;
+}
+
+export function getIncomingBackwardCommand() {
+    return getCommandAt(getSemanticIndex() + 1)?.undo?.cmd ?? null;
+}
+
+export function getOutgoingForwardCommand() {
+    return getCommandAt(getSemanticIndex() + 1)?.redo?.cmd ?? null;
+}
+
 export function getCurrentCommand() {
     const commands = getCommands();
     const index = undoManager.getIndex();
@@ -171,20 +206,14 @@ function addCheckpoint(undo, redo, isTail) {
     if (!redo || typeof redo !== "function") {
         throw new Error("addCheckpoint: redo must be a function");
     }
-    if (typeof undo.cmd !== "function") {
-        throw new Error("addCheckpoint: undo.cmd is missing");
-    }
-    if (typeof redo.cmd !== "function") {
-        throw new Error("addCheckpoint: redo.cmd is missing");
-    }
 
-    if (hasTail && undoManager.getIndex() === undoManager.getCommands().length - 1) {
+    if (tailMode === "ephemeral" && atTail()) {
         undoManager.undo();
         hasTail = false;
     }
-
+    
     undoManager.add({undo, redo});
-    hasTail = isTail; 
+    hasTail = (tailMode === "ephemeral") && isTail;
     sync = true; 
 }
 
