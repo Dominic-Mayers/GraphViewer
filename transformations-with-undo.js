@@ -16,6 +16,8 @@ async function transformAndCheckpoint(transformation, args = [], url) {
     undo.cmd.url = undoCmd.url;
 
     const redo = function () {};
+    
+    
     redo.cmd = async () => {
         await getServerStateAndSaveCheckpoint(url);
     };

@@ -3,8 +3,9 @@
 import { applyTransformationAndRender } from "./transformation-rendering.js";
 import { initHist, undoHist,  redoHist } from "./undo-manager-jit-tail.js";
 import { initTailFactory } from "./transformations-with-undo.js";
-import { getGraphId } from "./graph-state.js";
+import { getGraphId, setGraphState } from "./graph-state.js";
 import { getServerStateAndSaveCheckpoint } from "./transformations-api.js";
+import { fetchGraph } from "./graph-server-api.js";
 
 /**
  * Install keyboard listeners for undo/redo.
@@ -89,8 +90,10 @@ export async function initUndoManager(container) {
 
     const url = `/graph/${graphId}`;
 
-    const redoCommand = async () => {
-        await getServerStateAndSaveCheckpoint(url);
+    const redoState = await fetchGraph(url); 
+    
+    const redoCommand = () => {
+        setGraphState(redoState);
     };
     redoCommand.url = url;
 
