@@ -34,7 +34,7 @@ export function unSyncHist() {
     sync = false;
 }
 
-export function initHist(initialRedoCmd = async () => {}, tailModeArg = "ephemeral") {
+export function initHistGeneric(initialRedoCmd = async () => {}, tailModeArg = "ephemeral") {
 
     if (tailModeArg !== "ephemeral" && tailModeArg !== "persistent") {
         throw new Error("initHistGeneric: tailMode must be 'ephemeral' or 'persistent'");
@@ -60,6 +60,22 @@ export function initHist(initialRedoCmd = async () => {}, tailModeArg = "ephemer
 
     const redo = function () {};
     redo.cmd = initialRedoCmd;
+
+    undoManager.add({ undo, redo });
+
+    sync = true;
+    hasTail = false;
+}
+
+export function initHist() {
+
+    undoManager.clear();
+
+
+    const undo = function () {};
+    undo.cmd = async () => {
+        throw new Error("Initial checkpoint cannot be undone");
+    };
 
     undoManager.add({ undo, redo });
 
